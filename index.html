@@ -232,6 +232,22 @@
   .radar-img { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
   .radar-img img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 1.2vmin; }
   #radarMsg { color: #8fa1b8; font-size: 3vmin; text-align: center; }
+
+  /* Day details (tap a day in the 7-day strip) */
+  .day { cursor: pointer; }
+  .day:active { background: rgba(255,255,255,0.1); }
+  #dayDetail { position: fixed; inset: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
+  #dayDetail.open { display: flex; }
+  .dd-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.14); border-radius: 2.6vmin; width: min(92vw, 150vmin); max-height: 88vh; overflow: auto; padding: 3vmin 3.4vmin; box-shadow: 0 2vmin 6vmin rgba(0,0,0,0.5); }
+  .dd-head { display: flex; align-items: center; gap: 2vmin; margin-bottom: 2vmin; }
+  .dd-title { flex: 1; font-size: 4.4vmin; font-weight: 700; }
+  .dd-part { display: flex; gap: 2.6vmin; padding: 2vmin 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .dd-part .ic { font-size: 9vmin; flex: none; }
+  .dd-label { font-size: 2.4vmin; color: #8fa1b8; text-transform: uppercase; letter-spacing: 0.1em; }
+  .dd-temp { font-size: 4.2vmin; font-weight: 650; margin: 0.4vmin 0; }
+  .dd-temp span { font-size: 2.6vmin; font-weight: 500; color: var(--accent); margin-left: 1.4vmin; }
+  .dd-text { font-size: 2.9vmin; line-height: 1.4; color: #dbe4ef; }
+  body.night .dd-card { background: #0a0a0a; }
   #toast { position: fixed; left: 50%; bottom: 4vmin; transform: translateX(-50%); z-index: 60; background: #1f2937; border: 1px solid #4b5563; color: #fff; font-size: 2.6vmin; padding: 1.6vmin 2.8vmin; border-radius: 1.6vmin; opacity: 0; pointer-events: none; transition: opacity .3s; max-width: 80vw; text-align: center; }
   #toast.show { opacity: 1; }
   #updated { position: fixed; right: 2.6vmin; bottom: 0.6vmin; font-size: 1.5vmin; color: #4f5d70; }
@@ -283,6 +299,8 @@
 <div id="updated"></div>
 <div id="severe"></div>
 <div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
+
+<div id="dayDetail"><div class="dd-card" id="ddCard"></div></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -417,6 +435,7 @@
   rImg.onload = () => { $("radarTime").textContent = "Updated " + fmtTime(new Date(), { hour: "numeric", minute: "2-digit" }) + " · loop of the last hour"; };
   rImg.onerror = () => { rImg.style.display = "none"; rMsg.textContent = "Radar is unavailable right now. Try the interactive map."; };
   let severeActive = false;
+  let weekDays = []; // the 7-day strip's days, for the tap-for-details panel
   function openRadar() {
     if (radar.classList.contains("open")) return;
     radar.classList.add("open");
@@ -431,7 +450,11 @@
     rImg.removeAttribute("src");
   }
   $("nowCard").addEventListener("click", openRadar);
-  $("week").addEventListener("click", openRadar);
+  // 7-day strip: tapping a day opens its details (see showDay); tapping elsewhere on the strip still opens radar
+  $("week").addEventListener("click", (e) => {
+    const d = e.target.closest(".day");
+    if (d && d.dataset.idx) showDay(+d.dataset.idx); else openRadar();
+  });
   $("radarClose").addEventListener("click", closeRadar);
 
   /* ---------- Moon phase (calculated on the tablet) ---------- */
@@ -708,6 +731,7 @@
         days.push({ name: "Tonight", day: null, night: p });
       }
     }
+    weekDays = days.slice(0, 7);
     $("week").innerHTML = days.slice(0, 7).map((d, idx) => {
       const main = d.day || d.night;
       let name = d.name;
@@ -718,9 +742,39 @@
       }
       const hi = d.day ? `${d.day.temperature}°` : "";
       const lo = d.night ? `<span>${d.night.temperature}°</span>` : "";
-      return `<div class="day ${idx === 0 ? "today" : ""}"><div class="d">${name}</div><div class="i">${icon(main.shortForecast, !!d.day, main.startTime)}</div><div class="t">${hi}${lo}</div><div class="p">${pop(main)}</div></div>`;
+      d.label = name;
+      return `<div class="day ${idx === 0 ? "today" : ""}" data-idx="${idx}"><div class="d">${name}</div><div class="i">${icon(main.shortForecast, !!d.day, main.startTime)}</div><div class="t">${hi}${lo}</div><div class="p">${pop(main)}</div></div>`;
     }).join("");
   }
+
+  /* ---------- Day details panel ---------- */
+  let ddTimer = null;
+  const esc = (s) => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function showDay(i) {
+    const d = weekDays[i];
+    if (!d) return;
+    const main = d.day || d.night;
+    const dt = new Date(main.startTime);
+    const dateTxt = isNaN(dt) ? "" : dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
+    const part = (p, label) => {
+      if (!p) return "";
+      const rain = p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value ? `<span>${p.probabilityOfPrecipitation.value}% chance of rain</span>` : "";
+      return `<div class="dd-part">${icon(p.shortForecast, p.isDaytime, p.startTime)}<div>
+        <div class="dd-label">${esc(label)}</div>
+        <div class="dd-temp">${p.isDaytime ? "High" : "Low"} ${p.temperature}°${rain}</div>
+        <div class="dd-text">${esc(p.detailedForecast || p.shortForecast)}</div></div></div>`;
+    };
+    const dayName = d.day ? d.day.name : "";
+    $("ddCard").innerHTML = `<div class="dd-head"><div class="dd-title">${esc(dateTxt || d.label)}</div>
+        <button class="rbtn" id="ddRadar">Radar</button><button class="rbtn close" id="ddClose">&times; Close</button></div>
+      ${part(d.day, /^(Today|This Afternoon)$/i.test(dayName) ? dayName : "Day")}${part(d.night, d.night && /^(Tonight|Overnight)$/i.test(d.night.name) ? d.night.name : "Night")}`;
+    $("dayDetail").classList.add("open");
+    $("ddClose").onclick = closeDay;
+    $("ddRadar").onclick = () => { closeDay(); openRadar(); };
+    clearTimeout(ddTimer); ddTimer = setTimeout(closeDay, 60 * 1000); // back to home after a minute
+  }
+  function closeDay() { $("dayDetail").classList.remove("open"); clearTimeout(ddTimer); }
+  $("dayDetail").addEventListener("click", (e) => { if (e.target.id === "dayDetail") closeDay(); }); // tap outside the card to close
 
   /* ---------- Severe weather wake-up ---------- */
   function wakeScreen() {
@@ -759,8 +813,8 @@
 
     severeActive = keepOn.length > 0;
     applyBrightness(new Date());
-    if (keepOn.length) { wakeScreen(); openRadar(); }       // warnings: keep the screen on and radar open
-    else if (isNew.length) { wakeScreen(); openRadar(); }    // watches: wake once when issued
+    if (keepOn.length) { closeDay(); wakeScreen(); openRadar(); }       // warnings: keep the screen on and radar open
+    else if (isNew.length) { closeDay(); wakeScreen(); openRadar(); }    // watches: wake once when issued
     return keepOn.length ? 60 * 1000 : 2 * 60 * 1000;        // check more often during a watch or warning
   }
 
