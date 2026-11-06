@@ -24,6 +24,13 @@
     // Radar shown when you tap the weather (NWS Huntsville radar, KHTX)
     radarLoop: "https://radar.weather.gov/ridge/standard/KHTX_loop.gif",
     radarInteractive: "https://radar.weather.gov/station/KHTX/standard",
+    // Severe weather wake-up (needs Fully PLUS with the JavaScript Interface on)
+    // "keepOn": wake and keep the screen on until the alert ends. "once": wake once when it's issued.
+    wakeAlerts: {
+      "Tornado Warning": "keepOn",
+      "Severe Thunderstorm Warning": "keepOn",
+      "Tornado Watch": "once"
+    },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
       { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a" },
@@ -82,6 +89,16 @@
     margin-bottom: 1vmin; display: flex; gap: 1.2vmin; align-items: center;
   }
   .alert.moderate { background: #744210; border-color: #d69e2e; }
+  #severe {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 70; display: none;
+    padding: 1.6vmin 2.6vmin; font-size: 4vmin; font-weight: 800; color: #fff; text-align: center;
+    background: #b91c1c; border-bottom: 0.6vmin solid #fecaca; letter-spacing: 0.02em;
+    animation: sevPulse 1.6s ease-in-out infinite;
+  }
+  #severe.watch { background: #c2410c; border-bottom-color: #fed7aa; animation: none; }
+  #severe small { display: block; font-size: 2.4vmin; font-weight: 500; opacity: 0.9; margin-top: 0.4vmin; }
+  @keyframes sevPulse { 50% { background: #7f1d1d; } }
+  body.severe-on #radar { padding-top: 13vmin; }
   .alert.minor { background: #2c3e50; border-color: #4a6785; }
 
   /* Current conditions */
@@ -217,6 +234,7 @@
   <section class="card week" id="week"><div class="muted">Loading 7-day forecast…</div></section>
 </div>
 <div id="updated"></div>
+<div id="severe"></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -350,11 +368,14 @@
   }
   rImg.onload = () => { $("radarTime").textContent = "Updated " + fmtTime(new Date(), { hour: "numeric", minute: "2-digit" }) + " · loop of the last hour"; };
   rImg.onerror = () => { rImg.style.display = "none"; rMsg.textContent = "Radar is unavailable right now. Try the interactive map."; };
+  let severeActive = false;
   function openRadar() {
+    if (radar.classList.contains("open")) return;
     radar.classList.add("open");
     loadRadarImg();
     radarRefresh = setInterval(loadRadarImg, 2 * 60 * 1000);
-    radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); // back to home after 5 min
+    clearTimeout(radarAutoClose);
+    if (!severeActive) radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); // back to home after 5 min (not during a warning)
   }
   function closeRadar() {
     radar.classList.remove("open");
@@ -487,7 +508,7 @@
       $("updated").textContent = "Weather unavailable — retrying soon";
       if (!$("nowTemp").dataset.ok) $("nowText").textContent = "Forecast unavailable";
     }
-    loadAlerts();
+    if (!alertTimer) loadAlerts();
   }
 
   function renderNow(hours, days) {
@@ -533,10 +554,53 @@
     }).join("");
   }
 
+  /* ---------- Severe weather wake-up ---------- */
+  function wakeScreen() {
+    const f = window.fully;
+    if (!f) return;
+    try { if (typeof f.stopScreensaver === "function") f.stopScreensaver(); } catch (e) {}
+    try { if (typeof f.turnScreenOn === "function") f.turnScreenOn(); } catch (e) {}
+  }
+  let alertTimer = null;
+  function scheduleAlerts(ms) { clearTimeout(alertTimer); alertTimer = setTimeout(loadAlerts, ms); }
+
+  function handleSevere(feats) {
+    const now = Date.now();
+    const rules = CONFIG.wakeAlerts || {};
+    const active = feats.filter(a => rules[a.event] && (!a.ends && !a.expires || new Date(a.ends || a.expires).getTime() > now));
+    const keepOn = active.filter(a => rules[a.event] === "keepOn");
+    const seen = store.get("wx_seen_alerts") || {};
+    const isNew = active.filter(a => !seen[a.id]);
+    active.forEach(a => { seen[a.id] = new Date(a.ends || a.expires || now + 864e5).getTime(); });
+    Object.keys(seen).forEach(id => { if (seen[id] < now - 864e5) delete seen[id]; }); // forget old alerts
+    store.set("wx_seen_alerts", seen);
+
+    const banner = $("severe");
+    if (!active.length) {
+      if (severeActive && radar.classList.contains("open")) { clearTimeout(radarAutoClose); radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); }
+      severeActive = false;
+      banner.style.display = "none"; document.body.classList.remove("severe-on");
+      return 5 * 60 * 1000; // normal: check every 5 minutes
+    }
+    const top = keepOn[0] || active[0];
+    const until = top.ends || top.expires;
+    const untilTxt = until ? "until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
+    banner.className = keepOn.length ? "" : "watch";
+    banner.innerHTML = `${ICONS.alert()} ${top.event.toUpperCase()} ${untilTxt}<small>${(top.areaDesc || "").split(";").slice(0, 3).join(" · ")}</small>`;
+    banner.style.display = "block"; document.body.classList.add("severe-on");
+
+    severeActive = keepOn.length > 0;
+    if (keepOn.length) { wakeScreen(); openRadar(); }        // warnings: keep the screen on and radar open
+    else if (isNew.length) { wakeScreen(); openRadar(); }    // watches: wake once when issued
+    return keepOn.length ? 60 * 1000 : 2 * 60 * 1000;        // check more often during a watch or warning
+  }
+
   async function loadAlerts() {
+    let next = 5 * 60 * 1000;
     try {
       const data = await getJSON(`https://api.weather.gov/alerts/active?point=${CONFIG.lat},${CONFIG.lon}`);
       const feats = (data.features || []).map(f => f.properties);
+      next = handleSevere(feats);
       const box = $("alerts");
       if (!feats.length) { box.style.display = "none"; box.innerHTML = ""; return; }
       box.style.display = "block";
@@ -547,12 +611,15 @@
         const untilTxt = until ? " until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
         return `<div class="alert ${cls}">${ICONS.alert()} ${a.event}${untilTxt}</div>`;
       }).join("");
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); next = 2 * 60 * 1000; }
+    scheduleAlerts(next);
   }
+  // Check right away whenever the screen comes back on
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAlerts(); });
 
   setTimeout(loadWeather, 50); // let the clock and tiles paint first
   setInterval(loadWeather, 15 * 60 * 1000);            // weather every 15 min
-  setInterval(loadAlerts, 5 * 60 * 1000);              // alerts every 5 min
+  // alerts: checked on load, then every 5 min (every 1–2 min during a watch or warning)
   setTimeout(() => location.reload(), 6 * 60 * 60 * 1000); // full refresh every 6 hours
 })();
 </script>
