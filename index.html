@@ -94,9 +94,12 @@
   #sun .si { display: flex; align-items: center; gap: 0.8vmin; white-space: nowrap; transition: opacity 1s; }
   #sun .si b { font-weight: 600; color: #e8edf4; }
   #sun .si.past { opacity: 0.45; }
-  #extras { display: flex; flex-wrap: wrap; gap: 1vmin; margin-top: 1.2vmin; }
+  #extras { display: flex; flex-wrap: wrap; gap: 0.8vmin; margin-top: 1vmin; }
   #extras:empty { display: none; }
-  .chip { display: flex; align-items: center; gap: 0.9vmin; font-size: 2.3vmin; color: #cfdae8; padding: 0.5vmin 1.5vmin; border-radius: 99px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
+  body.busy #time { font-size: 11.5vmin; }   /* 3+ chips: shrink the clock so the weather card keeps its room */
+  body.busy #date { font-size: 3.4vmin; margin-top: 0.6vmin; }
+  body.busy #sun { margin-top: 0.6vmin; }
+  .chip { display: flex; align-items: center; gap: 0.8vmin; font-size: 2.1vmin; color: #cfdae8; padding: 0.4vmin 1.3vmin; border-radius: 99px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
   .chip i { width: 1.5vmin; height: 1.5vmin; border-radius: 50%; display: inline-block; }
 
   /* Alerts */
@@ -511,7 +514,10 @@
   };
   // Small chips under sunrise/sunset: storm risk, freeze, trash day, air quality
   const extras = { risk: store.get("wx_risk") || "", freeze: "", trash: "", aq: store.get("wx_aq") || "" };
-  function renderExtras() { $("extras").innerHTML = extras.risk + extras.freeze + extras.trash + extras.aq; }
+  function renderExtras() {
+    $("extras").innerHTML = extras.risk + extras.freeze + extras.trash + extras.aq;
+    document.body.classList.toggle("busy", $("extras").children.length >= 3);
+  }
 
   // Freeze reminder for the next night, from the forecast already loaded
   function freezeChip(periods) {
