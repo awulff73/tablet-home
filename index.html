@@ -116,18 +116,25 @@
     background: #b91c1c; border-bottom: 0.6vmin solid #fecaca; letter-spacing: 0.02em;
     animation: sevPulse 1.6s ease-in-out infinite;
   }
-  #freezeBar {
-    position: fixed; left: 0; right: 0; top: 0; z-index: 40; display: none;
-    padding: 1vmin 2.6vmin; font-size: 2.8vmin; font-weight: 700; color: #fff; text-align: center;
-    background: #1d4ed8; border-bottom: 0.4vmin solid #93c5fd; letter-spacing: 0.01em;
+  /* Notice banners across the top (freeze, no connection, unplugged) — they stack */
+  #topBars { position: fixed; left: 0; right: 0; top: 0; z-index: 40; }
+  #topBars .bar {
+    display: none; padding: 1vmin 2.6vmin; font-size: 2.8vmin; font-weight: 700; color: #fff; text-align: center;
+    letter-spacing: 0.01em; border-bottom: 0.4vmin solid rgba(255,255,255,0.45);
   }
+  #topBars .bar .ic { margin-right: 1vmin; }
+  #freezeBar { background: #1d4ed8; }
   #freezeBar.light { background: #1e3a8a; }
-  #freezeBar .ic { margin-right: 1vmin; }
-  body.freeze-on .wrap { padding-top: 7.5vmin; }
-  body.freeze-on #time { font-size: 12vmin; }
-  body.freeze-on.busy #time { font-size: 10vmin; }
-  body.severe-on #freezeBar { display: none !important; }
-  body.severe-on.freeze-on .wrap { padding-top: 2.2vmin; }
+  #netBar { background: #b45309; }
+  #powerBar { background: #9a3412; }
+  #powerBar.low { background: #b91c1c; }
+  body.bars-on #time { font-size: 12vmin; }
+  body.bars-on.busy #time { font-size: 10vmin; }
+  body.bars-many #time { font-size: 8vmin; }   /* 2+ banners: keep the weather card from being squeezed */
+  body.bars-many #date { font-size: 3vmin; margin-top: 0.4vmin; }
+  body.bars-many #sun { margin-top: 0.4vmin; }
+  body.bars-many .hour .i { font-size: 3vmin; margin: 0; }
+  body.severe-on #topBars { display: none; }
   #severe.watch { background: #c2410c; border-bottom-color: #fed7aa; animation: none; }
   #severe small { display: block; font-size: 2.4vmin; font-weight: 500; opacity: 0.9; margin-top: 0.4vmin; }
   @keyframes sevPulse { 50% { background: #7f1d1d; } }
@@ -269,7 +276,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
-<div id="freezeBar"></div>
+<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -537,12 +544,53 @@
   function showFreeze(periods) {
     const bar = $("freezeBar"), F = CONFIG.freeze;
     const n = (periods || []).find(p => !p.isDaytime);
-    if (!n || !F || n.temperature > F.light) { bar.style.display = "none"; document.body.classList.remove("freeze-on"); return; }
+    if (!n || !F || n.temperature > F.light) { setBar(bar, ""); return; }
     const when = /^(Tonight|Overnight)$/i.test(n.name) ? "tonight" : n.name;
     const hard = n.temperature <= F.hard;
-    bar.className = hard ? "" : "light";
-    bar.innerHTML = `${SNOWFLAKE}${hard ? "HARD FREEZE" : "FREEZE"} ${when.toUpperCase()} · LOW ${n.temperature}° · ${hard ? "drip faucets, cover outdoor spigots" : "cover plants"}`;
-    bar.style.display = "block"; document.body.classList.add("freeze-on");
+    bar.classList.toggle("light", !hard);
+    setBar(bar, `${SNOWFLAKE}${hard ? "HARD FREEZE" : "FREEZE"} ${when.toUpperCase()} · LOW ${n.temperature}° · ${hard ? "drip faucets, cover outdoor spigots" : "cover plants"}`);
+  }
+
+  // Show/hide one top banner and push the page down by however tall the stack is
+  function setBar(el, html) {
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.style.display = html ? "block" : "none";
+    layoutBars();
+  }
+  function layoutBars() {
+    const h = $("topBars").offsetHeight, on = h > 0 && !document.body.classList.contains("severe-on");
+    document.body.classList.toggle("bars-on", on);
+    document.body.classList.toggle("bars-many", on && [...$("topBars").children].filter(e => e.style.display === "block").length >= 2);
+    $("wrap").style.paddingTop = on ? `calc(${h}px + 2.2vmin)` : "";
+  }
+  window.addEventListener("resize", layoutBars);
+
+  // "Lost connection" banner: weather/alerts haven't updated for a while, so storm alerts can't get through
+  const STALE_MIN = 30;
+  let lastOk = Date.now();
+  const markOk = () => { lastOk = Date.now(); checkNet(); };
+  const WIFI = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M8 26a34 34 0 0 1 48 0M16 35a22 22 0 0 1 32 0M24 44a10 10 0 0 1 16 0"/><path d="M10 10L54 54"/></g></svg></span>`;
+  function checkNet() {
+    const stale = Date.now() - lastOk > STALE_MIN * 60 * 1000;
+    setBar($("netBar"), stale ? `${WIFI}NO WEATHER UPDATES SINCE ${fmtTime(new Date(lastOk), { hour: "numeric", minute: "2-digit" })} · check Wi-Fi — storm alerts can't get through` : "");
+  }
+
+  // Unplugged banner (Fully knows the battery; falls back to the browser's battery info)
+  const PLUG = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6V18M40 6V18M16 18H48V30a16 16 0 0 1-32 0Z"/><path d="M32 46V58"/></g></svg></span>`;
+  let battApi = null;
+  if (navigator.getBattery) navigator.getBattery().then(b => { battApi = b; checkPower(); }).catch(() => {});
+  function checkPower() {
+    let plugged = null, level = null;
+    const f = window.fully;
+    try {
+      if (f && typeof f.isPlugged === "function") plugged = !!f.isPlugged();
+      if (f && typeof f.getBatteryLevel === "function") level = Math.round(+f.getBatteryLevel());
+    } catch (e) {}
+    if (plugged === null && battApi) { plugged = battApi.charging; level = Math.round(battApi.level * 100); }
+    const show = plugged === false;
+    const low = show && level !== null && level <= 20;
+    $("powerBar").classList.toggle("low", low);
+    setBar($("powerBar"), show ? `${PLUG}NOT CHARGING${level !== null ? " · " + level + "%" : ""} · check the tablet's power cord` : "");
   }
 
   // Trash / recycling reminder: the evening before and the morning of pickup
@@ -616,6 +664,7 @@
       const w = { at: Date.now(), hourly: hourly.properties.periods.slice(0, 24), daily: daily.properties.periods };
       store.set("wx_data", w);
       showWeather(w);
+      markOk();
     } catch (e) {
       console.error(e);
       $("updated").textContent = "Weather unavailable — retrying soon";
@@ -692,7 +741,7 @@
     if (!active.length) {
       if (severeActive && radar.classList.contains("open")) { clearTimeout(radarAutoClose); radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); }
       if (severeActive) { severeActive = false; applyBrightness(new Date()); }
-      banner.style.display = "none"; document.body.classList.remove("severe-on");
+      banner.style.display = "none"; document.body.classList.remove("severe-on"); layoutBars();
       return 5 * 60 * 1000; // normal: check every 5 minutes
     }
     const top = keepOn[0] || active[0];
@@ -700,7 +749,7 @@
     const untilTxt = until ? "until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
     banner.className = keepOn.length ? "" : "watch";
     banner.innerHTML = `${ICONS.alert()} ${top.event.toUpperCase()} ${untilTxt}<small>${(top.areaDesc || "").split(";").slice(0, 3).join(" · ")}</small>`;
-    banner.style.display = "block"; document.body.classList.add("severe-on");
+    banner.style.display = "block"; document.body.classList.add("severe-on"); layoutBars();
 
     severeActive = keepOn.length > 0;
     applyBrightness(new Date());
@@ -715,6 +764,7 @@
       const data = await getJSON(`https://api.weather.gov/alerts/active?point=${CONFIG.lat},${CONFIG.lon}`);
       const feats = (data.features || []).map(f => f.properties);
       next = handleSevere(feats);
+      markOk();
       const box = $("alerts");
       if (!feats.length) { box.style.display = "none"; box.innerHTML = ""; }
       else {
@@ -736,7 +786,8 @@
   /* ---------- Air quality + storm risk outlook (chips defined above) ---------- */
   renderExtras();
   updateTrash();
-  setInterval(updateTrash, 60 * 1000);
+  checkPower();
+  setInterval(() => { updateTrash(); checkNet(); checkPower(); }, 60 * 1000);
 
   // US Air Quality Index (Open-Meteo, free, no key)
   const AQI = [[50, "Good", "#22c55e"], [100, "Moderate", "#eab308"], [150, "Unhealthy for sensitive groups", "#f97316"], [200, "Unhealthy", "#ef4444"], [300, "Very unhealthy", "#a855f7"], [1e9, "Hazardous", "#9f1239"]];
