@@ -36,8 +36,13 @@
     // Freeze reminder: shows when the next night's low is at or below "light" (°F); "hard" adds "drip faucets"
     freeze: { light: 32, hard: 28 },
     // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
-    // day: "Sun".."Sat". Every other week: add every: 2 and start: a pickup date "YYYY-MM-DD".
-    pickups: [],
+    // day: "Sun".."Sat". nth: 2 = second one of the month. holidayDelay: pushed back a day when a holiday falls on these days that week.
+    pickups: [
+      { label: "Trash", day: "Wed", holidayDelay: ["Mon", "Tue"] },
+      { label: "Recycling", day: "Fri", nth: 2 }
+    ],
+    // National holidays that delay pickup (remove any your hauler works through)
+    holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
     pickupRemind: { eveningFrom: 16, morningUntil: 10 },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
@@ -529,15 +534,33 @@
     if (hr >= R.eveningFrom) { target = today + 864e5; when = "tomorrow"; }
     else if (hr < R.morningUntil) { target = today; when = "today"; }
     else return "";
-    const dow = new Date(target).getUTCDay();
-    const due = list.filter(x => {
-      if (DAYS.indexOf(x.day) !== dow) return false;
-      if (!x.every || x.every === 1 || !x.start) return true;
-      const weeks = Math.round((target - Date.parse(x.start + "T00:00:00Z")) / (7 * 864e5));
-      return ((weeks % x.every) + x.every) % x.every === 0;
-    });
+    const due = list.filter(x => isPickup(x, target));
     if (!due.length) return "";
     return `<div class="chip"><i style="background:#84cc16"></i>${due.map(x => x.label).join(" & ")} pickup ${when}</div>`;
+  }
+  // Federal holidays for a year, as UTC-midnight timestamps (weekend dates moved to the observed Fri/Mon)
+  const holidayCache = {};
+  function holidaysFor(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const nthDow = (m, dow, n) => { const first = new Date(Date.UTC(y, m, 1)).getUTCDay(); return Date.UTC(y, m, 1 + ((dow - first + 7) % 7) + (n - 1) * 7); };
+    const lastDow = (m, dow) => { const last = new Date(Date.UTC(y, m + 1, 0)); return last.getTime() - ((last.getUTCDay() - dow + 7) % 7) * 864e5; };
+    const fixed = (m, d) => { const t = Date.UTC(y, m, d), w = new Date(t).getUTCDay(); return w === 6 ? t - 864e5 : w === 0 ? t + 864e5 : t; };
+    const all = {
+      "New Year's Day": fixed(0, 1), "MLK Day": nthDow(0, 1, 3), "Presidents Day": nthDow(1, 1, 3), "Memorial Day": lastDow(4, 1),
+      "Juneteenth": fixed(5, 19), "Independence Day": fixed(6, 4), "Labor Day": nthDow(8, 1, 1), "Columbus Day": nthDow(9, 1, 2),
+      "Veterans Day": fixed(10, 11), "Thanksgiving": nthDow(10, 4, 4), "Christmas": fixed(11, 25)
+    };
+    return (holidayCache[y] = (CONFIG.holidays || []).map(n => all[n]).filter(Boolean));
+  }
+  const isHoliday = (t) => { const y = new Date(t).getUTCFullYear(); return [y - 1, y, y + 1].some(yy => holidaysFor(yy).includes(t)); };
+
+  function isPickup(x, t) {
+    const dow = new Date(t).getUTCDay(), base = DAYS.indexOf(x.day);
+    if (x.nth) return dow === base && Math.ceil(new Date(t).getUTCDate() / 7) === x.nth;
+    const delayed = (day) => (x.holidayDelay || []).some(d => isHoliday(t - (day - DAYS.indexOf(d)) * 864e5)); // holiday earlier that week?
+    if (dow === base) return !delayed(base);
+    if (dow === (base + 1) % 7) return delayed(base + 1);
+    return false;
   }
   function updateTrash() { const t = trashChip(); if (t !== extras.trash) { extras.trash = t; renderExtras(); } }
 
