@@ -845,7 +845,11 @@
   setTimeout(loadWeather, 50); // let the clock and tiles paint first
   setInterval(loadWeather, 15 * 60 * 1000);            // weather every 15 min
   // alerts: checked on load, then every 5 min (every 1–2 min during a watch or warning)
-  setTimeout(() => location.reload(), 6 * 60 * 60 * 1000); // full refresh every 6 hours
+  // Full refresh every 6 hours — but only while the internet is working, so a reload never lands on an error page
+  setTimeout(function refresh() {
+    if (navigator.onLine !== false && Date.now() - lastOk < 10 * 60 * 1000) location.reload();
+    else setTimeout(refresh, 10 * 60 * 1000);
+  }, 6 * 60 * 60 * 1000);
 })();
 </script>
 </body>
