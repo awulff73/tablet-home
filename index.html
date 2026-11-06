@@ -116,6 +116,18 @@
     background: #b91c1c; border-bottom: 0.6vmin solid #fecaca; letter-spacing: 0.02em;
     animation: sevPulse 1.6s ease-in-out infinite;
   }
+  #freezeBar {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 40; display: none;
+    padding: 1vmin 2.6vmin; font-size: 2.8vmin; font-weight: 700; color: #fff; text-align: center;
+    background: #1d4ed8; border-bottom: 0.4vmin solid #93c5fd; letter-spacing: 0.01em;
+  }
+  #freezeBar.light { background: #1e3a8a; }
+  #freezeBar .ic { margin-right: 1vmin; }
+  body.freeze-on .wrap { padding-top: 7.5vmin; }
+  body.freeze-on #time { font-size: 12vmin; }
+  body.freeze-on.busy #time { font-size: 10vmin; }
+  body.severe-on #freezeBar { display: none !important; }
+  body.severe-on.freeze-on .wrap { padding-top: 2.2vmin; }
   #severe.watch { background: #c2410c; border-bottom-color: #fed7aa; animation: none; }
   #severe small { display: block; font-size: 2.4vmin; font-weight: 500; opacity: 0.9; margin-top: 0.4vmin; }
   @keyframes sevPulse { 50% { background: #7f1d1d; } }
@@ -257,6 +269,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
+<div id="freezeBar"></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -513,20 +526,23 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
   // Small chips under sunrise/sunset: storm risk, freeze, trash day, air quality
-  const extras = { risk: store.get("wx_risk") || "", freeze: "", trash: "", aq: store.get("wx_aq") || "" };
+  const extras = { risk: store.get("wx_risk") || "", trash: "", aq: store.get("wx_aq") || "" };
   function renderExtras() {
-    $("extras").innerHTML = extras.risk + extras.freeze + extras.trash + extras.aq;
+    $("extras").innerHTML = extras.risk + extras.trash + extras.aq;
     document.body.classList.toggle("busy", $("extras").children.length >= 3);
   }
 
-  // Freeze reminder for the next night, from the forecast already loaded
-  function freezeChip(periods) {
+  // Freeze banner across the top for the next night, from the forecast already loaded
+  const SNOWFLAKE = `<span class="ic"><svg viewBox="0 0 64 64"><g stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"><path d="M32 6V58M9.5 19L54.5 45M9.5 45L54.5 19"/><path d="M24 10L32 18L40 10M24 54L32 46L40 54"/></g></svg></span>`;
+  function showFreeze(periods) {
+    const bar = $("freezeBar"), F = CONFIG.freeze;
     const n = (periods || []).find(p => !p.isDaytime);
-    const F = CONFIG.freeze;
-    if (!n || !F || n.temperature > F.light) return "";
+    if (!n || !F || n.temperature > F.light) { bar.style.display = "none"; document.body.classList.remove("freeze-on"); return; }
     const when = /^(Tonight|Overnight)$/i.test(n.name) ? "tonight" : n.name;
     const hard = n.temperature <= F.hard;
-    return `<div class="chip"><i style="background:${hard ? "#3b82f6" : "#93c5fd"}"></i>${hard ? "Hard freeze" : "Freeze"} ${when}: ${n.temperature}° · ${hard ? "drip faucets" : "cover plants"}</div>`;
+    bar.className = hard ? "" : "light";
+    bar.innerHTML = `${SNOWFLAKE}${hard ? "HARD FREEZE" : "FREEZE"} ${when.toUpperCase()} · LOW ${n.temperature}° · ${hard ? "drip faucets, cover outdoor spigots" : "cover plants"}`;
+    bar.style.display = "block"; document.body.classList.add("freeze-on");
   }
 
   // Trash / recycling reminder: the evening before and the morning of pickup
@@ -579,7 +595,7 @@
     if (!hours.length) return false;
     renderNow(hours, w.daily);
     renderWeek(w.daily);
-    extras.freeze = freezeChip(w.daily); renderExtras();
+    showFreeze(w.daily);
     $("updated").textContent = "Weather updated " + fmtTime(new Date(w.at), { hour: "numeric", minute: "2-digit" });
     return true;
   }
