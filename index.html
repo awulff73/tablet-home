@@ -33,6 +33,12 @@
     },
     // Real screen brightness, 0–255 (needs Fully). Day = sunrise to sunset, evening = sunset to night hours, night = night hours.
     brightness: { day: 200, evening: 110, night: 35 },
+    // Freeze reminder: shows when the next night's low is at or below "light" (°F); "hard" adds "drip faucets"
+    freeze: { light: 32, hard: 28 },
+    // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
+    // day: "Sun".."Sat". Every other week: add every: 2 and start: a pickup date "YYYY-MM-DD".
+    pickups: [],
+    pickupRemind: { eveningFrom: 16, morningUntil: 10 },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
       { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a" },
@@ -498,6 +504,43 @@
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
+  // Small chips under sunrise/sunset: storm risk, freeze, trash day, air quality
+  const extras = { risk: store.get("wx_risk") || "", freeze: "", trash: "", aq: store.get("wx_aq") || "" };
+  function renderExtras() { $("extras").innerHTML = extras.risk + extras.freeze + extras.trash + extras.aq; }
+
+  // Freeze reminder for the next night, from the forecast already loaded
+  function freezeChip(periods) {
+    const n = (periods || []).find(p => !p.isDaytime);
+    const F = CONFIG.freeze;
+    if (!n || !F || n.temperature > F.light) return "";
+    const when = /^(Tonight|Overnight)$/i.test(n.name) ? "tonight" : n.name;
+    const hard = n.temperature <= F.hard;
+    return `<div class="chip"><i style="background:${hard ? "#3b82f6" : "#93c5fd"}"></i>${hard ? "Hard freeze" : "Freeze"} ${when}: ${n.temperature}° · ${hard ? "drip faucets" : "cover plants"}</div>`;
+  }
+
+  // Trash / recycling reminder: the evening before and the morning of pickup
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  function trashChip() {
+    const list = CONFIG.pickups || [], R = CONFIG.pickupRemind || { eveningFrom: 16, morningUntil: 10 };
+    if (!list.length) return "";
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hourCycle: "h23", timeZone: TZ }).formatToParts(new Date()).map(x => [x.type, x.value]));
+    const today = Date.UTC(+p.year, p.month - 1, +p.day), hr = +p.hour;
+    let target, when;
+    if (hr >= R.eveningFrom) { target = today + 864e5; when = "tomorrow"; }
+    else if (hr < R.morningUntil) { target = today; when = "today"; }
+    else return "";
+    const dow = new Date(target).getUTCDay();
+    const due = list.filter(x => {
+      if (DAYS.indexOf(x.day) !== dow) return false;
+      if (!x.every || x.every === 1 || !x.start) return true;
+      const weeks = Math.round((target - Date.parse(x.start + "T00:00:00Z")) / (7 * 864e5));
+      return ((weeks % x.every) + x.every) % x.every === 0;
+    });
+    if (!due.length) return "";
+    return `<div class="chip"><i style="background:#84cc16"></i>${due.map(x => x.label).join(" & ")} pickup ${when}</div>`;
+  }
+  function updateTrash() { const t = trashChip(); if (t !== extras.trash) { extras.trash = t; renderExtras(); } }
+
   let points = store.get("wx_points");
   if (points && (points.lat !== CONFIG.lat || points.lon !== CONFIG.lon)) points = null;
 
@@ -507,6 +550,7 @@
     if (!hours.length) return false;
     renderNow(hours, w.daily);
     renderWeek(w.daily);
+    extras.freeze = freezeChip(w.daily); renderExtras();
     $("updated").textContent = "Weather updated " + fmtTime(new Date(w.at), { hour: "numeric", minute: "2-digit" });
     return true;
   }
@@ -644,10 +688,10 @@
   // Check right away whenever the screen comes back on
   document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAlerts(); });
 
-  /* ---------- Air quality + storm risk outlook (shown as small chips under sunrise/sunset) ---------- */
-  const extras = { risk: store.get("wx_risk") || "", aq: store.get("wx_aq") || "" };
-  function renderExtras() { $("extras").innerHTML = extras.risk + extras.aq; }
+  /* ---------- Air quality + storm risk outlook (chips defined above) ---------- */
   renderExtras();
+  updateTrash();
+  setInterval(updateTrash, 60 * 1000);
 
   // US Air Quality Index (Open-Meteo, free, no key)
   const AQI = [[50, "Good", "#22c55e"], [100, "Moderate", "#eab308"], [150, "Unhealthy for sensitive groups", "#f97316"], [200, "Unhealthy", "#ef4444"], [300, "Very unhealthy", "#a855f7"], [1e9, "Hazardous", "#9f1239"]];
