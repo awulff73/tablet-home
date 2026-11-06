@@ -31,6 +31,8 @@
       "Severe Thunderstorm Warning": "keepOn",
       "Tornado Watch": "once"
     },
+    // Real screen brightness, 0–255 (needs Fully). Day = sunrise to sunset, evening = sunset to night hours, night = night hours.
+    brightness: { day: 200, evening: 110, night: 35 },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
       { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a" },
@@ -52,6 +54,7 @@
     transition: filter 2s;
   }
   body.night { filter: brightness(0.45); }
+  body.night.hwdim { filter: brightness(0.85); } /* the screen itself is dimmed, so only a little extra */
 
   .wrap {
     height: 100vh; padding: 2.2vmin 2.6vmin;
@@ -80,6 +83,10 @@
   #sun .si { display: flex; align-items: center; gap: 0.8vmin; white-space: nowrap; transition: opacity 1s; }
   #sun .si b { font-weight: 600; color: #e8edf4; }
   #sun .si.past { opacity: 0.45; }
+  #extras { display: flex; flex-wrap: wrap; gap: 1vmin; margin-top: 1.2vmin; }
+  #extras:empty { display: none; }
+  .chip { display: flex; align-items: center; gap: 0.9vmin; font-size: 2.3vmin; color: #cfdae8; padding: 0.5vmin 1.5vmin; border-radius: 99px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
+  .chip i { width: 1.5vmin; height: 1.5vmin; border-radius: 50%; display: inline-block; }
 
   /* Alerts */
   #alerts { margin-top: 1.6vmin; display: none; }
@@ -208,6 +215,7 @@
     <div id="time">--:--</div>
     <div id="date"></div>
     <div id="sun"></div>
+    <div id="extras"></div>
     <div id="alerts"></div>
   </section>
 
@@ -435,6 +443,22 @@
       ? (h >= CONFIG.nightStart || h < CONFIG.nightEnd)
       : (h >= CONFIG.nightStart && h < CONFIG.nightEnd);
     document.body.classList.toggle("night", night);
+    applyBrightness(d);
+  }
+
+  /* ---------- Screen brightness (Fully only) ---------- */
+  let brightPhase = "";
+  function applyBrightness(d) {
+    const f = window.fully, B = CONFIG.brightness;
+    if (!f || !B || typeof f.setScreenBrightness !== "function") return;
+    document.body.classList.add("hwdim");
+    let phase = "day";
+    if (document.body.classList.contains("night")) phase = "night";
+    else if (sun && (d < sun.rise || d > sun.set)) phase = "evening";
+    if (severeActive) phase = "day"; // warnings: full brightness
+    if (phase === brightPhase) return; // only change at sunrise, sunset and night hours
+    brightPhase = phase;
+    try { f.setScreenBrightness(B[phase]); } catch (e) {}
   }
   tick();
   setInterval(tick, 1000 * 10);
@@ -578,7 +602,7 @@
     const banner = $("severe");
     if (!active.length) {
       if (severeActive && radar.classList.contains("open")) { clearTimeout(radarAutoClose); radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); }
-      severeActive = false;
+      if (severeActive) { severeActive = false; applyBrightness(new Date()); }
       banner.style.display = "none"; document.body.classList.remove("severe-on");
       return 5 * 60 * 1000; // normal: check every 5 minutes
     }
@@ -590,7 +614,8 @@
     banner.style.display = "block"; document.body.classList.add("severe-on");
 
     severeActive = keepOn.length > 0;
-    if (keepOn.length) { wakeScreen(); openRadar(); }        // warnings: keep the screen on and radar open
+    applyBrightness(new Date());
+    if (keepOn.length) { wakeScreen(); openRadar(); }       // warnings: keep the screen on and radar open
     else if (isNew.length) { wakeScreen(); openRadar(); }    // watches: wake once when issued
     return keepOn.length ? 60 * 1000 : 2 * 60 * 1000;        // check more often during a watch or warning
   }
@@ -618,6 +643,64 @@
   }
   // Check right away whenever the screen comes back on
   document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAlerts(); });
+
+  /* ---------- Air quality + storm risk outlook (shown as small chips under sunrise/sunset) ---------- */
+  const extras = { risk: store.get("wx_risk") || "", aq: store.get("wx_aq") || "" };
+  function renderExtras() { $("extras").innerHTML = extras.risk + extras.aq; }
+  renderExtras();
+
+  // US Air Quality Index (Open-Meteo, free, no key)
+  const AQI = [[50, "Good", "#22c55e"], [100, "Moderate", "#eab308"], [150, "Unhealthy for sensitive groups", "#f97316"], [200, "Unhealthy", "#ef4444"], [300, "Very unhealthy", "#a855f7"], [1e9, "Hazardous", "#9f1239"]];
+  async function loadAir() {
+    try {
+      const d = await getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CONFIG.lat}&longitude=${CONFIG.lon}&current=us_aqi`);
+      const v = d.current ? d.current.us_aqi : null;
+      if (v == null) extras.aq = "";
+      else {
+        const [, name, col] = AQI.find(a => v <= a[0]);
+        extras.aq = `<div class="chip"><i style="background:${col}"></i>Air quality: ${name} (${Math.round(v)})</div>`;
+      }
+      store.set("wx_aq", extras.aq);
+      renderExtras();
+    } catch (e) { console.error(e); }
+  }
+
+  // Storm Prediction Center risk for today and the next two days (only shown at Marginal or higher)
+  const SPC = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
+  const RISK = { 3: ["Marginal", "#22c55e"], 4: ["Slight", "#eab308"], 5: ["Enhanced", "#f97316"], 6: ["Moderate", "#ef4444"], 8: ["High", "#d946ef"] };
+  const tzDay = (d) => d.toLocaleDateString("en-CA", { timeZone: TZ }); // YYYY-MM-DD in Central time
+  async function loadOutlook() {
+    try {
+      const now = new Date();
+      const days = await Promise.all([1, 9, 17].map(async (layer, i) => {
+        const u = `${SPC}/${layer}/query?geometry=${CONFIG.lon},${CONFIG.lat}&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects&outFields=dn,expire&returnGeometry=false&f=json`;
+        const feats = ((await getJSON(u)).features || []).map(x => x.attributes);
+        const top = feats.reduce((m, a) => (a.dn > m.dn ? a : m), { dn: 0 });
+        return Object.assign({ i }, top);
+      }));
+      const parts = [];
+      let worst = 0;
+      days.forEach((a) => {
+        if (!RISK[a.dn]) return;
+        let label = ["today", "tomorrow", "day 3"][a.i];
+        const m = /^(\d{4})(\d\d)(\d\d)(\d\d)(\d\d)$/.exec(a.expire || "");
+        if (m) {
+          const end = new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]));
+          if (end < now) return; // old outlook
+          const start = new Date(end.getTime() - 24 * 3600 * 1000);
+          const diff = Math.round((new Date(tzDay(start)) - new Date(tzDay(now))) / 864e5);
+          label = diff <= 0 ? "today" : diff === 1 ? "tomorrow" : start.toLocaleDateString("en-US", { weekday: "short", timeZone: TZ });
+        }
+        parts.push(`${RISK[a.dn][0]} ${label}`);
+        worst = Math.max(worst, a.dn);
+      });
+      extras.risk = parts.length ? `<div class="chip"><i style="background:${RISK[worst][1]}"></i>Storm risk: ${parts.join(" · ")}</div>` : "";
+      store.set("wx_risk", extras.risk);
+      renderExtras();
+    } catch (e) { console.error(e); }
+  }
+  setTimeout(() => { loadAir(); loadOutlook(); }, 400);
+  setInterval(() => { loadAir(); loadOutlook(); }, 30 * 60 * 1000); // every 30 min
 
   setTimeout(loadWeather, 50); // let the clock and tiles paint first
   setInterval(loadWeather, 15 * 60 * 1000);            // weather every 15 min
