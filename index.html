@@ -602,7 +602,8 @@
       const feats = (data.features || []).map(f => f.properties);
       next = handleSevere(feats);
       const box = $("alerts");
-      if (!feats.length) { box.style.display = "none"; box.innerHTML = ""; return; }
+      if (!feats.length) { box.style.display = "none"; box.innerHTML = ""; }
+      else {
       box.style.display = "block";
       box.innerHTML = feats.slice(0, 3).map((a) => {
         const sev = (a.severity || "").toLowerCase();
@@ -611,6 +612,7 @@
         const untilTxt = until ? " until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
         return `<div class="alert ${cls}">${ICONS.alert()} ${a.event}${untilTxt}</div>`;
       }).join("");
+      }
     } catch (e) { console.error(e); next = 2 * 60 * 1000; }
     scheduleAlerts(next);
   }
