@@ -131,6 +131,7 @@
   #topBars .bar .ic { margin-right: 1vmin; }
   #freezeBar { background: #1d4ed8; }
   #freezeBar.light { background: #1e3a8a; }
+  #trashBar { background: #78350f; }
   #netBar { background: #b45309; }
   #powerBar { background: #9a3412; }
   #powerBar.low { background: #b91c1c; }
@@ -298,7 +299,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
-<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
+<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
 
 <div id="dayDetail"><div class="dd-card" id="ddCard"></div></div>
 
@@ -562,9 +563,9 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   };
   // Small chips under sunrise/sunset: storm risk, freeze, trash day, air quality
-  const extras = { risk: store.get("wx_risk") || "", trash: "", aq: store.get("wx_aq") || "" };
+  const extras = { risk: store.get("wx_risk") || "", aq: store.get("wx_aq") || "" };
   function renderExtras() {
-    $("extras").innerHTML = extras.risk + extras.trash + extras.aq;
+    $("extras").innerHTML = extras.risk + extras.aq;
     document.body.classList.toggle("busy", $("extras").children.length >= 3);
   }
 
@@ -622,9 +623,10 @@
     setBar($("powerBar"), show ? `${PLUG}NOT CHARGING${level !== null ? " · " + level + "%" : ""} · check the tablet's power cord` : "");
   }
 
-  // Trash / recycling reminder: the evening before and the morning of pickup
+  // Trash / recycling banner: the evening before and the morning of pickup
   const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  function trashChip() {
+  const CAN = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16H54M24 16V9H40V16"/><path d="M16 16L19 56H45L48 16"/><path d="M27 26V46M37 26V46"/></g></svg></span>`;
+  function trashText() {
     const list = CONFIG.pickups || [], R = CONFIG.pickupRemind || { eveningFrom: 16, morningUntil: 10 };
     if (!list.length) return "";
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hourCycle: "h23", timeZone: TZ }).formatToParts(new Date()).map(x => [x.type, x.value]));
@@ -635,7 +637,7 @@
     else return "";
     const due = list.filter(x => isPickup(x, target));
     if (!due.length) return "";
-    return `<div class="chip"><i style="background:#84cc16"></i>${due.map(x => x.label).join(" & ")} pickup ${when}</div>`;
+    return `${CAN}${due.map(x => x.label.toUpperCase()).join(" & ")} PICKUP ${when.toUpperCase()} · ${when === "tomorrow" ? "roll it to the curb tonight" : "roll it to the curb this morning"}`;
   }
   // Federal holidays for a year, as UTC-midnight timestamps (weekend dates moved to the observed Fri/Mon)
   const holidayCache = {};
@@ -661,7 +663,7 @@
     if (dow === (base + 1) % 7) return delayed(base + 1);
     return false;
   }
-  function updateTrash() { const t = trashChip(); if (t !== extras.trash) { extras.trash = t; renderExtras(); } }
+  function updateTrash() { setBar($("trashBar"), trashText()); }
 
   let points = store.get("wx_points");
   if (points && (points.lat !== CONFIG.lat || points.lon !== CONFIG.lon)) points = null;
