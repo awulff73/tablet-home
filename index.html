@@ -521,7 +521,7 @@
       const main = d.day || d.night;
       let name = d.name;
       if (/^(Today|This Afternoon|Tonight|Overnight)$/i.test(name)) name = d.day ? "Today" : "Tonight";
-      else name = name.slice(0, 3);
+      else name = new Date(main.startTime).toLocaleDateString("en-US", { weekday: "short", timeZone: TZ }); // holidays like "Veterans Day" still show the weekday
       const hi = d.day ? `${d.day.temperature}°` : "";
       const lo = d.night ? `<span>${d.night.temperature}°</span>` : "";
       return `<div class="day ${idx === 0 ? "today" : ""}"><div class="d">${name}</div><div class="i">${icon(main.shortForecast, !!d.day, main.startTime)}</div><div class="t">${hi}${lo}</div><div class="p">${pop(main)}</div></div>`;
