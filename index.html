@@ -33,7 +33,8 @@
     },
     // Real screen brightness, 0–255 (needs Fully). Day = sunrise to sunset, evening = sunset to night hours, night = night hours.
     brightness: { day: 200, evening: 110, night: 35 },
-    // Freeze reminder: shows when the next night's low is at or below "light" (°F); "hard" adds "drip faucets"
+    // Cold banner: next night's low at or below "light" (°F) = freeze, at or below "hard" = hard freeze.
+    // NWS Frost Advisory (light blue), Freeze Watch/Warning (blue), Hard Freeze Watch/Warning (dark blue) also show it.
     freeze: { light: 32, hard: 28 },
     // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
     // day: "Sun".."Sat". nth: 2 = second one of the month. holidayDelay: pushed back a day when a holiday falls on these days that week.
@@ -129,8 +130,9 @@
     letter-spacing: 0.01em; border-bottom: 0.4vmin solid rgba(255,255,255,0.45);
   }
   #topBars .bar .ic { margin-right: 1vmin; }
-  #freezeBar { background: #1d4ed8; }
-  #freezeBar.light { background: #1e3a8a; }
+  #freezeBar.frost { background: #7dd3fc; color: #0c2d48; border-bottom-color: #0369a1; }  /* frost advisory: light blue */
+  #freezeBar.freeze { background: #2563eb; }   /* freeze: medium blue */
+  #freezeBar.hard { background: #1e3a8a; }     /* hard freeze: dark blue */
   #trashBar { background: #78350f; }
   #netBar { background: #b45309; }
   #powerBar { background: #9a3412; }
@@ -570,15 +572,36 @@
   }
 
   // Freeze banner across the top for the next night, from the forecast already loaded
-  const SNOWFLAKE = `<span class="ic"><svg viewBox="0 0 64 64"><g stroke="#fff" stroke-width="5" stroke-linecap="round" fill="none"><path d="M32 6V58M9.5 19L54.5 45M9.5 45L54.5 19"/><path d="M24 10L32 18L40 10M24 54L32 46L40 54"/></g></svg></span>`;
+  const SNOWFLAKE = `<span class="ic"><svg viewBox="0 0 64 64"><g stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"><path d="M32 6V58M9.5 19L54.5 45M9.5 45L54.5 19"/><path d="M24 10L32 18L40 10M24 54L32 46L40 54"/></g></svg></span>`;
+  // Combines the forecast low with any NWS frost/freeze alert; the most serious one wins
+  const COLD = { frost: 1, freeze: 2, hard: 3 };
+  const COLD_TIP = { frost: "cover tender plants", freeze: "cover plants, bring potted plants in", hard: "drip faucets, cover outdoor spigots" };
+  const coldOf = (ev) => /hard freeze/i.test(ev) ? "hard" : /freeze (watch|warning)/i.test(ev) ? "freeze" : /frost advisory/i.test(ev) ? "frost" : "";
+  let coldNight = null, coldAlert = null;
   function showFreeze(periods) {
-    const bar = $("freezeBar"), F = CONFIG.freeze;
-    const n = (periods || []).find(p => !p.isDaytime);
-    if (!n || !F || n.temperature > F.light) { setBar(bar, ""); return; }
-    const when = /^(Tonight|Overnight)$/i.test(n.name) ? "tonight" : n.name;
-    const hard = n.temperature <= F.hard;
-    bar.classList.toggle("light", !hard);
-    setBar(bar, `${SNOWFLAKE}${hard ? "HARD FREEZE" : "FREEZE"} ${when.toUpperCase()} · LOW ${n.temperature}° · ${hard ? "drip faucets, cover outdoor spigots" : "cover plants"}`);
+    coldNight = (periods || []).find(p => !p.isDaytime) || null;
+    renderCold();
+  }
+  function setColdAlerts(feats) {
+    coldAlert = feats.filter(a => coldOf(a.event)).sort((a, b) => COLD[coldOf(b.event)] - COLD[coldOf(a.event)])[0] || null;
+    renderCold();
+  }
+  function renderCold() {
+    const bar = $("freezeBar"), F = CONFIG.freeze || {}, n = coldNight;
+    const fc = n && n.temperature <= F.hard ? "hard" : n && n.temperature <= F.light ? "freeze" : "";
+    const al = coldAlert ? coldOf(coldAlert.event) : "";
+    const level = (COLD[al] || 0) >= (COLD[fc] || 0) ? al : fc;
+    if (!level) { setBar(bar, ""); return; }
+    let head;
+    if (level === al) {
+      const until = coldAlert.ends || coldAlert.expires;
+      head = coldAlert.event.toUpperCase() + (until ? " UNTIL " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", timeZone: TZ }).toUpperCase() : "");
+    } else {
+      head = (level === "hard" ? "HARD FREEZE " : "FREEZE ") + (/^(Tonight|Overnight)$/i.test(n.name) ? "TONIGHT" : n.name.toUpperCase());
+    }
+    const low = n && n.temperature <= 40 ? ` · LOW ${n.temperature}°` : "";
+    bar.className = "bar " + level;
+    setBar(bar, `${SNOWFLAKE}${head}${low} · ${COLD_TIP[level]}`);
   }
 
   // Show/hide one top banner and push the page down by however tall the stack is
@@ -826,12 +849,13 @@
       const data = await getJSON(`https://api.weather.gov/alerts/active?point=${CONFIG.lat},${CONFIG.lon}`);
       const feats = (data.features || []).map(f => f.properties);
       next = handleSevere(feats);
+      setColdAlerts(feats);
       markOk();
-      const box = $("alerts");
-      if (!feats.length) { box.style.display = "none"; box.innerHTML = ""; }
+      const box = $("alerts"), listed = feats.filter(a => !coldOf(a.event)); // frost/freeze alerts show as the top banner instead
+      if (!listed.length) { box.style.display = "none"; box.innerHTML = ""; }
       else {
       box.style.display = "block";
-      box.innerHTML = feats.slice(0, 3).map((a) => {
+      box.innerHTML = listed.slice(0, 3).map((a) => {
         const sev = (a.severity || "").toLowerCase();
         const cls = sev === "extreme" || sev === "severe" ? "" : sev === "moderate" ? "moderate" : "minor";
         const until = a.ends || a.expires;
