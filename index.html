@@ -144,7 +144,12 @@
   body.bars-many #sun { margin-top: 0.4vmin; }
   body.bars-many .hour .i { font-size: 3vmin; margin: 0; }
   body.severe-on #topBars { display: none; }
-  #severe.watch { background: #c2410c; border-bottom-color: #fed7aa; animation: none; }
+  /* Tornado Warning: pulsing magenta-purple · Severe Thunderstorm Warning: pulsing orange · Tornado Watch: steady red */
+  #severe.tornado { background: #a21caf; border-bottom-color: #f5d0fe; animation: torPulse 1.6s ease-in-out infinite; }
+  #severe.tstorm { background: #ea580c; border-bottom-color: #fed7aa; animation: tsPulse 1.6s ease-in-out infinite; }
+  #severe.watch { background: #b91c1c; border-bottom-color: #fecaca; animation: none; }
+  @keyframes torPulse { 50% { background: #581c87; } }
+  @keyframes tsPulse { 50% { background: #9a3412; } }
   #severe small { display: block; font-size: 2.4vmin; font-weight: 500; opacity: 0.9; margin-top: 0.4vmin; }
   @keyframes sevPulse { 50% { background: #7f1d1d; } }
   body.severe-on #radar { padding-top: 13vmin; }
@@ -829,10 +834,11 @@
       banner.style.display = "none"; document.body.classList.remove("severe-on"); layoutBars();
       return 5 * 60 * 1000; // normal: check every 5 minutes
     }
-    const top = keepOn[0] || active[0];
+    const rank = (a) => /tornado warning/i.test(a.event) ? 0 : 1;   // a tornado warning outranks a thunderstorm warning
+    const top = keepOn.slice().sort((a, b) => rank(a) - rank(b))[0] || active[0];
     const until = top.ends || top.expires;
     const untilTxt = until ? "until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
-    banner.className = keepOn.length ? "" : "watch";
+    banner.className = /tornado warning/i.test(top.event) ? "tornado" : /thunderstorm warning/i.test(top.event) ? "tstorm" : "watch";
     banner.innerHTML = `${ICONS.alert()} ${top.event.toUpperCase()} ${untilTxt}<small>${(top.areaDesc || "").split(";").slice(0, 3).join(" · ")}</small>`;
     banner.style.display = "block"; document.body.classList.add("severe-on"); layoutBars();
 
