@@ -52,7 +52,8 @@
     rainLine: { chance: 40, hoursAhead: 12 },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
-      { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a" },
+      // chrome: true = open this tile in the Chrome app instead of inside Fully (Wyze won't sign in inside Fully). Back returns to this page.
+      { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a", chrome: true },
       { label: "Thermostat",    sub: "ecobee",                  icon: "thermo", url: "https://www.ecobee.com/login/", color: "#b7791f" },
       { label: "Water",         sub: "Flume",                   icon: "water",  url: "https://portal.flumewater.com/", color: "#0e7490" }
     ]
@@ -442,12 +443,21 @@
 
 
   /* ---------- Tiles ---------- */
+  // Open a tile's website in the Chrome app (used for Wyze, whose sign-in refuses Fully's built-in browser)
+  function openInChrome(url) {
+    const f = window.fully;
+    const intent = "intent://" + url.replace(/^https?:\/\//, "") + "#Intent;scheme=https;package=com.android.chrome;end";
+    try { if (f && typeof f.startIntent === "function") { f.startIntent(intent); return true; } } catch (e) {}
+    try { if (f && typeof f.startApplication === "function") { f.startApplication("com.android.chrome", "android.intent.action.VIEW", url); return true; } } catch (e) {}
+    return false; // not in Fully (fridge, a computer): just follow the link
+  }
   const tilesEl = $("tiles");
   CONFIG.tiles.forEach((t) => {
     const el = document.createElement("a");
     el.className = "tile";
     el.href = t.url || "#";
     el.target = "_top";
+    if (t.chrome) el.addEventListener("click", (e) => { if (openInChrome(t.url)) e.preventDefault(); });
     if (t.app) {
       el.addEventListener("click", (e) => {
         e.preventDefault();
@@ -460,7 +470,7 @@
     }
     el.style.background = `linear-gradient(135deg, ${t.color} 0%, ${shade(t.color, -35)} 100%)`;
     el.innerHTML = `<div class="ti">${ICONS[t.icon] ? ICONS[t.icon]() : t.icon}</div><div><div class="tl">${t.label}</div><div class="ts">${t.sub}</div></div><div class="arrow">›</div>`;
-    if (!t.app) el.addEventListener("click", () => el.classList.add("loading"));
+    if (!t.app && !(t.chrome && window.fully)) el.addEventListener("click", () => el.classList.add("loading"));
     tilesEl.appendChild(el);
   });
   if (CONFIG.tiles.length >= 4) tilesEl.classList.add("grid2");
@@ -562,6 +572,7 @@
       el.className = "nv-tile";
       el.href = t.url || "#";
       el.target = "_top";
+      if (t.chrome) el.addEventListener("click", (e) => { if (openInChrome(t.url)) e.preventDefault(); });
       if (t.app) el.addEventListener("click", (e) => {
         e.preventDefault();
         if (window.fully && typeof window.fully.startApplication === "function") window.fully.startApplication(t.app);
@@ -944,6 +955,7 @@
   function wakeScreen() {
     const f = window.fully;
     if (!f) return;
+    try { if (typeof f.bringToForeground === "function") f.bringToForeground(); } catch (e) {} // e.g. Chrome is open on the Wyze tile
     try { if (typeof f.stopScreensaver === "function") f.stopScreensaver(); } catch (e) {}
     try { if (typeof f.turnScreenOn === "function") f.turnScreenOn(); } catch (e) {}
   }
