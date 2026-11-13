@@ -50,14 +50,23 @@
     pickupRemind: { eveningFrom: 16, morningUntil: 10 },
     // Countdown card under the tiles: the next few holidays and family events within daysAhead days.
     // Holidays (calculated automatically): New Year's Day, Easter, Mother's Day, Father's Day, Independence Day, Thanksgiving, Christmas.
-    // Events: date "YYYY-MM-DD" = one time, "MM-DD" = every year. theme: bday, anniv, trip, event (or a holiday look: xmas, thanks, july4, newyear, easter, mom, dad).
+    // Events: date "YYYY-MM-DD" = one time, "MM-DD" = every year. what (optional) is a label for the list; the background shows it (heart = anniversary, cake = birthday). theme: bday, anniv, trip, event (or a holiday look: xmas, thanks, july4, newyear, easter, mom, dad).
     countdowns: {
       show: 3,
       daysAhead: 60,
       holidays: ["New Year's Day", "Easter", "Mother's Day", "Father's Day", "Independence Day", "Thanksgiving", "Christmas"],
       events: [
-        // { name: "Mom's birthday", date: "03-14", theme: "bday" },
-        // { name: "Family trip", date: "2026-12-19", theme: "trip" }
+        { name: "Melissa & Andy", what: "Anniversary", date: "11-13", theme: "anniv" },
+        { name: "Whitney & Walton", what: "Anniversary", date: "10-21", theme: "anniv" },
+        { name: "Jacob & Katrielle", what: "Anniversary", date: "10-15", theme: "anniv" },
+        { name: "Andy's birthday", what: "Birthday", date: "04-18", theme: "bday" },
+        { name: "Melissa's birthday", what: "Birthday", date: "07-03", theme: "bday" },
+        { name: "Katrielle's birthday", what: "Birthday", date: "08-08", theme: "bday" },
+        { name: "Whitney's birthday", what: "Birthday", date: "06-28", theme: "bday" },
+        { name: "Jared's birthday", what: "Birthday", date: "01-16", theme: "bday" },
+        { name: "Claire's birthday", what: "Birthday", date: "07-15", theme: "bday" },
+        { name: "Zachary's birthday", what: "Birthday", date: "10-13", theme: "bday" }
+        // one-time example: { name: "Family trip", date: "2026-12-19", theme: "trip" }
       ]
     },
     // Rain timing line under current conditions: an hour counts as "rain" at this chance (%) or higher; looks this many hours ahead
@@ -313,10 +322,10 @@
   #cdRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 1.4vmin; gap: 1.4vmin; }
   .cdi { display: flex; align-items: center; border-radius: 1.4vmin; padding: 1.3vmin; border: 1px solid rgba(255,255,255,0.14); min-width: 0; overflow: hidden; background: linear-gradient(135deg, #234e52, #1a2e35); }
   .cdn { font-size: 5vmin; font-weight: 300; line-height: 1; text-align: center; margin-right: 1.1vmin; flex: none; color: #e8edf4; }
-  .cdn .ic { font-size: 5vmin; }
+  .cdn .ic { font-size: 4vmin; }
   .cdt { min-width: 0; }
   .cdl { font-size: 2vmin; font-weight: 650; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .cdd { font-size: 1.7vmin; color: rgba(255,255,255,0.72); white-space: nowrap; }
+  .cdd { font-size: 1.7vmin; color: rgba(255,255,255,0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .cdi.today { box-shadow: 0 0 2.4vmin rgba(251,211,141,0.35); border-color: rgba(251,211,141,0.55); }
   .cdi.today .cdd { color: #fefcbf; font-weight: 700; }
   .cdi.cd-thanks { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22%23f6ad55%22%20opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M98%206c13%205%2019%2018%2014%2030-11-3-19-11-21-22%202-4%204-6%207-8z%22/%3E%3Cpath%20d%3D%22M80%2033c10%202%2015%2011%2013%2021-9-1-14-8-16-15%201-3%202-5%203-6z%22/%3E%3Cpath%20d%3D%22M60%2010c8%201%2012%208%2011%2015-7-1-11-6-12-11z%22%20opacity%3D%22.7%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #7b341e,#3c1d0f); } .cdi.cd-thanks .cdn { color: #fbd38d; }
@@ -1088,13 +1097,13 @@
     const C = CONFIG.countdowns;
     if (!C) return [];
     const p = tzParts(new Date()), today = Date.UTC(p.year, p.month - 1, p.day), list = [];
-    const add = (name, t, theme) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= (C.daysAhead || 60)) list.push({ name: name, t: t, d: d, theme: theme }); };
+    const add = (name, t, theme, what) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= (C.daysAhead || 60)) list.push({ name: name, t: t, d: d, theme: theme, what: what }); };
     [p.year, p.year + 1].forEach((y) => {
       (C.holidays || []).forEach((h) => { const t = holidayDay(h, y); if (t !== null) add(h, t, CD_THEME[h] || "event"); });
       (C.events || []).forEach((e) => {
         const m = /^(?:(\d{4})-)?(\d{1,2})-(\d{1,2})$/.exec(e.date || "");
         if (!m || (m[1] && +m[1] !== y)) return;
-        add(e.name, Date.UTC(y, +m[2] - 1, +m[3]), e.theme || "event");
+        add(e.name, Date.UTC(y, +m[2] - 1, +m[3]), e.theme || "event", e.what);
       });
     });
     list.sort((a, b) => a.d - b.d);
@@ -1105,7 +1114,7 @@
     const items = countdownItems();
     const html = items.map((it) => {
       const when = it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow" : new Date(it.t).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
-      return `<div class="cdi cd-${it.theme}${it.d === 0 ? " today" : ""}"><div class="cdn">${it.d === 0 ? PARTY : it.d}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${when}</div></div></div>`;
+      return `<div class="cdi cd-${it.theme}${it.d === 0 ? " today" : ""}" title="${esc((it.what ? it.what + " · " : "") + it.name)}"><div class="cdn">${it.d === 0 ? PARTY : it.d}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${when}</div></div></div>`;
     }).join("");
     if (html === cdHtml) return;
     cdHtml = html;
