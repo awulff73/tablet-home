@@ -41,6 +41,8 @@
     // "pipes": any time of year, a low at or below this shows a very-cold banner to protect pipes (set to null to turn off).
     // NWS Frost Advisory (light blue), Freeze Watch/Warning (blue), Hard Freeze Watch/Warning (dark blue) also show it whenever NWS issues them.
     freeze: { light: 32, hard: 28, seasons: [["03-01", "05-15"], ["10-01", "11-30"]], pipes: 20 },
+    // Air quality banner (purple) only when the US AQI reaches this level (101 = "unhealthy for sensitive groups"). null = off.
+    airBanner: 101,
     // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
     // day: "Sun".."Sat". nth: 2 = second one of the month. holidayDelay: pushed back a day when a holiday falls on these days that week.
     pickups: [
@@ -168,6 +170,8 @@
   #netBar { background: #b45309; }
   #powerBar { background: #9a3412; }
   #powerBar.low { background: #b91c1c; }
+  #airBar { background: #6b21a8; }          /* air quality: purple */
+  #airBar.bad { background: #86198f; }      /* unhealthy or worse: magenta-purple */
   body.bars-on #time { font-size: 16vmin; }
   body.bars-on.busy #time { font-size: 13.5vmin; }
   body.bars-many #time { font-size: 11vmin; }   /* 2+ banners: keep the weather card from being squeezed */
@@ -394,7 +398,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
-<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
+<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div></div>
 
 <div id="nightView">
   <div class="nv-main" id="nvMain"><div id="nvTime">--:--</div><div id="nvDate"></div></div>
@@ -1139,6 +1143,24 @@
   }
   try { renderCountdowns(); } catch (e) { console.error(e); }
   setInterval(() => { try { renderCountdowns(); } catch (e) {} }, 5 * 60 * 1000);
+
+  /* ---------- Air quality banner (Open-Meteo US AQI, free, no key) — only when the air is actually bad ---------- */
+  const SMOKE = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M8 22h30a8 8 0 1 0-8-8"/><path d="M8 34h44a8 8 0 1 1-8 8"/><path d="M8 46h22"/></g></svg></span>`;
+  const AIR = [[150, "UNHEALTHY FOR SENSITIVE GROUPS", "sensitive groups should limit time outdoors"], [200, "UNHEALTHY", "limit time outdoors"], [300, "VERY UNHEALTHY", "stay indoors, keep windows closed"], [1e9, "HAZARDOUS", "stay indoors, keep windows closed"]];
+  async function loadAir() {
+    const min = CONFIG.airBanner;
+    if (min == null) { setBar($("airBar"), ""); return; }
+    try {
+      const d = await getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CONFIG.lat}&longitude=${CONFIG.lon}&current=us_aqi`);
+      const v = d.current ? d.current.us_aqi : null;
+      if (v == null || v < min) { setBar($("airBar"), ""); return; }
+      const lvl = AIR.filter(a => v <= a[0])[0];
+      $("airBar").classList.toggle("bad", v > 150);
+      setBar($("airBar"), `${SMOKE}AIR QUALITY: ${lvl[1]} · AQI ${Math.round(v)} · ${lvl[2]}`);
+    } catch (e) { console.error(e); }
+  }
+  setTimeout(loadAir, 400);
+  setInterval(loadAir, 30 * 60 * 1000); // every 30 min
 
   /* ---------- Periodic checks ---------- */
   renderExtras();
