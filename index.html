@@ -334,6 +334,20 @@
   .cdt { min-width: 0; }
   .cdl { font-size: 2vmin; font-weight: 650; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .cdd { font-size: 1.9vmin; margin-top: 0.3vmin; color: rgba(255,255,255,0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cd { cursor: pointer; }
+  #cd:active { transform: scale(0.985); }
+  #cdDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
+  #cdDetail.open { display: flex; }
+  .cda-card { width: 92vw; width: min(92vw, 160vmin); }
+  .cda-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 1.6vmin; gap: 1.6vmin; }
+  .cda-month { grid-column: 1 / -1; font-size: 2.2vmin; letter-spacing: 0.12em; text-transform: uppercase; color: #8fa1b8; margin-top: 1.2vmin; padding-bottom: 0.4vmin; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .cda-month:first-child { margin-top: 0; }
+  .cdi.cda { min-height: 13vmin; padding: 2vmin 1.8vmin; }
+  .cdi.cda .cdn { font-size: 6.5vmin; min-width: 10vmin; margin-right: 1.6vmin; }
+  .cdi.cda .cdn small { display: block; font-size: 1.7vmin; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin-top: 0.4vmin; }
+  .cdi.cda .cdl { font-size: 2.6vmin; }
+  .cdi.cda .cdd { font-size: 2vmin; white-space: normal; }
+  @media (orientation: portrait) { .cda-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .cdi.today { box-shadow: 0 0 2.4vmin rgba(251,211,141,0.35); border-color: rgba(251,211,141,0.55); }
   .cdi.today .cdd { color: #fefcbf; font-weight: 700; }
   .cdi.cd-thanks { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22%23f6ad55%22%20opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M98%206c13%205%2019%2018%2014%2030-11-3-19-11-21-22%202-4%204-6%207-8z%22/%3E%3Cpath%20d%3D%22M80%2033c10%202%2015%2011%2013%2021-9-1-14-8-16-15%201-3%202-5%203-6z%22/%3E%3Cpath%20d%3D%22M60%2010c8%201%2012%208%2011%2015-7-1-11-6-12-11z%22%20opacity%3D%22.7%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #7b341e,#3c1d0f); } .cdi.cd-thanks .cdn { color: #fbd38d; }
@@ -410,6 +424,7 @@
 </div>
 
 <div id="dayDetail"><div class="dd-card" id="ddCard"></div></div>
+<div id="cdDetail"><div class="dd-card cda-card" id="cdCard"></div></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -1112,11 +1127,13 @@
     }
     return null;
   }
-  function countdownItems() {
+  function countdownItems(opts) {
     const C = CONFIG.countdowns;
     if (!C) return [];
+    opts = opts || {};
+    const ahead = opts.daysAhead || C.daysAhead || 60;
     const p = tzParts(new Date()), today = Date.UTC(p.year, p.month - 1, p.day), list = [];
-    const add = (name, t, theme, what) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= (C.daysAhead || 60)) list.push({ name: name, t: t, d: d, theme: theme, what: what }); };
+    const add = (name, t, theme, what) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= ahead) list.push({ name: name, t: t, d: d, theme: theme, what: what }); };
     [p.year, p.year + 1].forEach((y) => {
       (C.holidays || []).forEach((h) => { const t = holidayDay(h, y); if (t !== null) add(h, t, CD_THEME[h] || "event"); });
       (C.events || []).forEach((e) => {
@@ -1126,7 +1143,7 @@
       });
     });
     list.sort((a, b) => a.d - b.d);
-    return list.slice(0, C.show || 3);
+    return opts.all ? list : list.slice(0, C.show || 3);
   }
   let cdHtml = null;
   function renderCountdowns() {
@@ -1142,6 +1159,29 @@
     document.body.classList.toggle("cd-on", items.length > 0);
   }
   try { renderCountdowns(); } catch (e) { console.error(e); }
+
+  // Tap the countdown card: every holiday and family date for the next 12 months
+  let cdTimer = null;
+  function showAllCountdowns() {
+    const items = countdownItems({ all: true, daysAhead: 364 }); // one year, without today's event showing twice
+    let month = "";
+    const html = items.map((it) => {
+      const dt = new Date(it.t);
+      const m = dt.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+      const head = m !== month ? `<div class="cda-month">${m}</div>` : "";
+      month = m;
+      const when = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+      const big = it.d === 0 ? PARTY : `${it.d}<small>${it.d === 1 ? "day" : "days"}</small>`;
+      return `${head}<div class="cdi cda cd-${it.theme}${it.d === 0 ? " today" : ""}"><div class="cdn">${big}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${it.what && it.what !== "Birthday" ? esc(it.what) + " · " : ""}${it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow · " + when : when}</div></div></div>`;
+    }).join("") || `<div class="muted">Nothing on the calendar in the next 12 months.</div>`;
+    $("cdCard").innerHTML = `<div class="dd-head"><div class="dd-title">Coming up this year</div><button class="rbtn close" id="cdClose">&times; Close</button></div><div class="cda-list">${html}</div>`;
+    $("cdDetail").classList.add("open");
+    $("cdClose").onclick = closeAllCountdowns;
+    clearTimeout(cdTimer); cdTimer = setTimeout(closeAllCountdowns, 90 * 1000); // back to home after 90 seconds
+  }
+  function closeAllCountdowns() { $("cdDetail").classList.remove("open"); clearTimeout(cdTimer); }
+  $("cd").addEventListener("click", showAllCountdowns);
+  $("cdDetail").addEventListener("click", (e) => { if (e.target.id === "cdDetail") closeAllCountdowns(); });
   setInterval(() => { try { renderCountdowns(); } catch (e) {} }, 5 * 60 * 1000);
 
   /* ---------- Air quality banner (Open-Meteo US AQI, free, no key) — only when the air is actually bad ---------- */
