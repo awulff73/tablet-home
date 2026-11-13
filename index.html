@@ -48,6 +48,8 @@
     // National holidays that delay pickup (remove any your hauler works through)
     holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
     pickupRemind: { eveningFrom: 16, morningUntil: 10 },
+    // Rain timing line under current conditions: an hour counts as "rain" at this chance (%) or higher; looks this many hours ahead
+    rainLine: { chance: 40, hoursAhead: 12 },
     tiles: [
       { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
       { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a" },
@@ -166,6 +168,10 @@
   #nowTemp sup { font-size: 5vmin; vertical-align: top; }
   #nowText { font-size: 3.4vmin; color: #cfdae8; }
   #nowMeta { font-size: 2.4vmin; color: #8fa1b8; margin-top: 0.6vmin; }
+  #nowRain { font-size: 2.5vmin; color: var(--accent); margin-top: 0.8vmin; }
+  #nowRain:empty { display: none; }
+  #nowRain .ic { margin-right: 0.6vmin; }
+  #nowRain.wet { color: #93c5fd; font-weight: 600; }
   .place { font-size: 2.2vmin; color: #7d8ea5; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.6vmin; }
   .hourly { display: flex; gap: 1vmin; margin-top: 1vmin; overflow: hidden; }
   .hour { flex: 1; text-align: center; min-width: 0; }
@@ -195,7 +201,7 @@
   .tile .ts { font-size: 2.6vmin; opacity: 0.8; margin-top: 0.5vmin; }
   .tile .arrow { position: absolute; right: 3vmin; font-size: 5vmin; opacity: 0.5; }
   .tile.loading::after {
-    content: "Opening…"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    content: "Opening…"; position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center;
     background: rgba(0,0,0,0.55); font-size: 4vmin; font-weight: 600;
   }
 
@@ -226,7 +232,7 @@
 
   /* Radar overlay */
   #radar {
-    position: fixed; inset: 0; z-index: 50; display: none;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50; display: none;
     background: rgba(6,9,14,0.96); flex-direction: column;
     padding: 2vmin 2.6vmin;
   }
@@ -247,9 +253,9 @@
   /* Day details (tap a day in the 7-day strip) */
   .day { cursor: pointer; }
   .day:active { background: rgba(255,255,255,0.1); }
-  #dayDetail { position: fixed; inset: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
+  #dayDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
   #dayDetail.open { display: flex; }
-  .dd-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.14); border-radius: 2.6vmin; width: min(92vw, 150vmin); max-height: 88vh; overflow: auto; padding: 3vmin 3.4vmin; box-shadow: 0 2vmin 6vmin rgba(0,0,0,0.5); }
+  .dd-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.14); border-radius: 2.6vmin; width: 92vw; width: min(92vw, 150vmin); max-height: 88vh; overflow: auto; padding: 3vmin 3.4vmin; box-shadow: 0 2vmin 6vmin rgba(0,0,0,0.5); }
   .dd-head { display: flex; align-items: center; gap: 2vmin; margin-bottom: 2vmin; }
   .dd-title { flex: 1; font-size: 4.4vmin; font-weight: 700; }
   .dd-part { display: flex; gap: 2.6vmin; padding: 2vmin 0; border-top: 1px solid rgba(255,255,255,0.08); }
@@ -264,7 +270,7 @@
   #updated { position: fixed; right: 2.6vmin; bottom: 0.6vmin; font-size: 1.5vmin; color: #4f5d70; }
 
   /* Night view (night hours, wall tablet): one big dim gray clock, tonight/tomorrow, tiles */
-  #nightView { position: fixed; inset: 0; z-index: 30; display: none; flex-direction: column; justify-content: space-between; background: #000; color: #b4b2a9; padding: 4vmin 5vmin 2.4vmin; transition: transform 1s; }
+  #nightView { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; display: none; flex-direction: column; justify-content: space-between; background: #000; color: #b4b2a9; padding: 4vmin 5vmin 2.4vmin; transition: transform 1s; }
   body.nv-on #nightView { display: flex; }
   body.severe-on #nightView { display: none; }
   #nvTime { font-size: 39vmin; font-weight: 200; line-height: 0.85; letter-spacing: -0.04em; color: #c9c7bf; font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -320,6 +326,7 @@
         <div>
           <div id="nowText">Loading forecast…</div>
           <div id="nowMeta"></div>
+          <div id="nowRain"></div>
         </div>
       </div>
     </div>
@@ -360,6 +367,14 @@
   const TZ = CONFIG.timeZone;
   const fmtTime = (d, opts) => d.toLocaleTimeString("en-US", Object.assign({ timeZone: TZ }, opts));
   $("place").textContent = CONFIG.place;
+  // Wall-clock date/time in CONFIG.timeZone. Plain toLocaleString + a regex, so it also works in older
+  // browsers (the fridge's) that lack formatToParts, hourCycle or Object.fromEntries.
+  function tzParts(d) {
+    const s = (d || new Date()).toLocaleString("en-US", { timeZone: TZ, hour12: false });
+    const m = /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/.exec(s) || [];
+    return { year: +m[3], month: +m[1], day: +m[2], hour: (+m[4]) % 24, minute: +m[5] };
+  }
+  const two = (n) => ("0" + n).slice(-2);
 
   /* ---------- Drawn icons (no emoji fonts needed, look the same on every device) ---------- */
   const C = { sun: "#FDB813", ray: "#FDB813", cloud: "#D5DEE8", cloud2: "#9AA9BB", rain: "#60A5FA", bolt: "#FACC15", snow: "#F1F5F9", moon: "#F3E7C4", moonDark: "#2B3646", fog: "#AEB9C7", wind: "#BFD4EA", red: "#F87171" };
@@ -523,7 +538,7 @@
   }
   let sunKey = "", sun = null;
   function renderSun(d) {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", timeZone: TZ }).formatToParts(d).map(p => [p.type, p.value]));
+    const parts = tzParts(d);
     const key = `${parts.year}-${parts.month}-${parts.day}`;
     if (key !== sunKey) { sunKey = key; sun = sunTimes(+parts.year, +parts.month, +parts.day, CONFIG.lat, CONFIG.lon); }
     if (!sun) { $("sun").innerHTML = ""; return; }
@@ -568,7 +583,7 @@
   function renderNightWx() {
     if (!nightOK || !nightW) return;
     const now = Date.now();
-    const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: TZ }).format(new Date()));
+    const h = tzParts(new Date()).hour;
     const afterMidnight = h < 12;
     const hours = nightW.hourly.filter(p => new Date(p.endTime).getTime() > now);
     const daily = nightW.daily.filter(p => new Date(p.endTime).getTime() > now);
@@ -584,8 +599,8 @@
     }
     if (dd) {
       const v = dd.probabilityOfPrecipitation && dd.probabilityOfPrecipitation.value;
-      const ymd = new Date(dd.startTime).toLocaleDateString("en-CA", { timeZone: TZ }).split("-");
-      const st = sunTimes(+ymd[0], +ymd[1], +ymd[2], CONFIG.lat, CONFIG.lon);
+      const ymd = tzParts(new Date(dd.startTime));
+      const st = sunTimes(ymd.year, ymd.month, ymd.day, CONFIG.lat, CONFIG.lon);
       const extra = (v ? ` · ${v}% chance of rain` : "") + (st ? ` · sunrise ${fmtTime(st.rise, { hour: "numeric", minute: "2-digit" })}` : "");
       right = `<div class="nv-label">${afterMidnight ? "Today" : "Tomorrow"}</div><div class="nv-temp">${icon(dd.shortForecast, true, dd.startTime)}${dd.temperature}°${nn ? ` <span>/ ${nn.temperature}°</span>` : ""}</div><div class="nv-text">${dd.shortForecast}${extra}</div>`;
     }
@@ -596,21 +611,19 @@
   /* ---------- Clock + night mode ---------- */
   function tick() {
     const d = new Date();
-    const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: TZ }).format(d));
+    const tp = tzParts(d), h = tp.hour;
     const ampm = h >= 12 ? "PM" : "AM";
     const h12 = h % 12 || 12;
-    const m = new Intl.DateTimeFormat("en-US", { minute: "2-digit", timeZone: TZ }).format(d).padStart(2, "0");
+    const m = two(tp.minute);
     $("time").innerHTML = `${h12}:${m}<span class="ampm">${ampm}</span>`;
     $("date").textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
     if (nightOK) { $("nvTime").innerHTML = $("time").innerHTML; $("nvDate").textContent = $("date").textContent; }
-    renderSun(d);
+    try { renderSun(d); } catch (e) { console.error(e); }
     const night = CONFIG.nightStart > CONFIG.nightEnd
       ? (h >= CONFIG.nightStart || h < CONFIG.nightEnd)
       : (h >= CONFIG.nightStart && h < CONFIG.nightEnd);
     document.body.classList.toggle("night", night);
-    setNightView(night);
-    renderNightWx();
-    applyBrightness(d);
+    try { setNightView(night); renderNightWx(); applyBrightness(d); } catch (e) { console.error(e); }
   }
 
   /* ---------- Screen brightness (Fully only) ---------- */
@@ -755,8 +768,8 @@
   function trashText() {
     const list = CONFIG.pickups || [], R = CONFIG.pickupRemind || { eveningFrom: 16, morningUntil: 10 };
     if (!list.length) return "";
-    const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", hourCycle: "h23", timeZone: TZ }).formatToParts(new Date()).map(x => [x.type, x.value]));
-    const today = Date.UTC(+p.year, p.month - 1, +p.day), hr = +p.hour;
+    const p = tzParts(new Date());
+    const today = Date.UTC(p.year, p.month - 1, p.day), hr = p.hour;
     let target, when;
     if (hr >= R.eveningFrom) { target = today + 864e5; when = "tomorrow"; }
     else if (hr < R.morningUntil) { target = today; when = "today"; }
@@ -841,10 +854,32 @@
     const hiLo = today.isDaytime ? `High ${today.temperature}°` : `Low ${today.temperature}°`;
     const wind = h.windSpeed ? ` · Wind ${h.windDirection} ${h.windSpeed}` : "";
     $("nowMeta").textContent = hiLo + wind;
+    try { const r = rainLine(hours); $("nowRain").className = r.wet ? "wet" : ""; $("nowRain").innerHTML = r.text ? ICONS.drop() + r.text : ""; } catch (e) { console.error(e); }
     $("hourly").innerHTML = hours.slice(1, 9).map((p) => {
       const t = fmtTime(new Date(p.startTime), { hour: "numeric" }).replace(" ", "").toLowerCase();
       return `<div class="hour"><div class="h">${t}</div><div class="i">${icon(p.shortForecast, p.isDaytime, p.startTime)}</div><div class="t">${p.temperature}°</div><div class="p">${pop(p)}</div></div>`;
     }).join("");
+  }
+
+  // One line under current conditions: when rain starts or stops in the next few hours
+  function rainLine(hours) {
+    const R = CONFIG.rainLine;
+    if (!R || !hours.length) return {};
+    const ahead = hours.slice(0, R.hoursAhead || 12);
+    const chance = (p) => (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0;
+    const wet = (p) => chance(p) >= R.chance;
+    const kind = (p) => { const s = (p.shortForecast || "").toLowerCase(); return /thunder|storm/.test(s) ? "Storms" : /snow|flurr/.test(s) ? "Snow" : /sleet|freezing|ice/.test(s) ? "Wintry mix" : "Rain"; };
+    const at = (p) => fmtTime(new Date(p.startTime), { hour: "numeric" });
+    if (wet(hours[0])) {
+      let stop = -1;
+      for (let i = 1; i < hours.length; i++) if (!wet(hours[i])) { stop = i; break; }
+      return { wet: true, text: stop < 0 ? `${kind(hours[0])} likely for the next ${hours.length}+ hours` : `${kind(hours[0])} ending around ${at(hours[stop])}` };
+    }
+    const first = ahead.filter(wet)[0];
+    if (first) return { wet: true, text: `${kind(first)} likely starting around ${at(first)}` };
+    const max = ahead.reduce((m, p) => chance(p) > chance(m) ? p : m, ahead[0]);
+    if (chance(max) >= 20) return { text: `Mostly dry · ${chance(max)}% chance of ${kind(max).toLowerCase()} around ${at(max)}` };
+    return { text: `Dry for the next ${ahead.length} hours` };
   }
 
   function renderWeek(periods) {
@@ -999,7 +1034,7 @@
   // Storm Prediction Center risk for today and the next two days (only shown at Marginal or higher)
   const SPC = "https://mapservices.weather.noaa.gov/vector/rest/services/outlooks/SPC_wx_outlks/MapServer";
   const RISK = { 3: ["Marginal", "#22c55e"], 4: ["Slight", "#eab308"], 5: ["Enhanced", "#f97316"], 6: ["Moderate", "#ef4444"], 8: ["High", "#d946ef"] };
-  const tzDay = (d) => d.toLocaleDateString("en-CA", { timeZone: TZ }); // YYYY-MM-DD in Central time
+  const tzDay = (d) => { const p = tzParts(d); return p.year + "-" + two(p.month) + "-" + two(p.day); }; // YYYY-MM-DD in Central time
   async function loadOutlook() {
     try {
       const now = new Date();
