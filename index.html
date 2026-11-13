@@ -499,8 +499,9 @@
   function openInChrome(url) {
     const f = window.fully;
     const intent = "intent://" + url.replace(/^https?:\/\//, "") + "#Intent;scheme=https;package=com.android.chrome;end";
-    try { if (f && typeof f.startIntent === "function") { f.startIntent(intent); return true; } } catch (e) {}
+    // Name Chrome directly so Android doesn't ask "Open with…" every time; the intent link is only a fallback
     try { if (f && typeof f.startApplication === "function") { f.startApplication("com.android.chrome", "android.intent.action.VIEW", url); return true; } } catch (e) {}
+    try { if (f && typeof f.startIntent === "function") { f.startIntent(intent); return true; } } catch (e) {}
     return false; // not in Fully (fridge, a computer): just follow the link
   }
   const tilesEl = $("tiles");
