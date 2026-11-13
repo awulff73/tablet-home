@@ -17,7 +17,22 @@
     b.style.cssText = "position:fixed;left:18px;bottom:18px;z-index:2147483647;background:#2b6cb0;color:#fff;font:600 22px system-ui,sans-serif;padding:16px 26px;border-radius:999px;border:2px solid rgba(255,255,255,.35);box-shadow:0 6px 18px rgba(0,0,0,.45);cursor:pointer;user-select:none;";
     b.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); goHome(); }, true);
     document.body.appendChild(b);
+    place();
   }
+  /* Keep the button inside what is actually on screen (some sites, e.g. ecobee, make the page taller than the screen) */
+  function place() {
+    var b = document.getElementById("fk-home");
+    if (!b) { return; }
+    var vv = window.visualViewport;
+    var h = vv ? vv.height : window.innerHeight;
+    var top = (vv ? vv.offsetTop : 0) + Math.min(h, window.innerHeight) - b.offsetHeight - 40;
+    b.style.bottom = "auto";
+    b.style.top = Math.max(8, Math.round(top)) + "px";
+    b.style.left = Math.round((vv ? vv.offsetLeft : 0) + 18) + "px";
+  }
+  if (window.visualViewport && !window.__fkVV) { window.__fkVV = true; window.visualViewport.addEventListener("resize", place); window.visualViewport.addEventListener("scroll", place); }
+  if (!window.__fkResize) { window.__fkResize = true; window.addEventListener("resize", place); }
   addButton();
-  if (!window.__fkHomeTimer) { window.__fkHomeTimer = setInterval(addButton, 1500); }
+  place();
+  if (!window.__fkHomeTimer) { window.__fkHomeTimer = setInterval(function () { addButton(); place(); }, 1500); }
 })();
