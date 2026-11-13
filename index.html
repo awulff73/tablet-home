@@ -21,6 +21,9 @@
     // Night mode dims the screen between these hours (24h clock)
     nightStart: 22,
     nightEnd: 6,
+    // Night view during night hours: big dim clock, tonight/tomorrow forecast and the tiles. Tap the clock or weather for the full dashboard.
+    // "tablet" = wall tablet only (Fully), true = every screen (fridge too), false = off
+    nightView: "tablet",
     // Radar shown when you tap the weather (NWS Huntsville radar, KHTX)
     radarLoop: "https://radar.weather.gov/ridge/standard/KHTX_loop.gif",
     radarInteractive: "https://radar.weather.gov/station/KHTX/standard",
@@ -260,6 +263,29 @@
   #toast.show { opacity: 1; }
   #updated { position: fixed; right: 2.6vmin; bottom: 0.6vmin; font-size: 1.5vmin; color: #4f5d70; }
 
+  /* Night view (night hours, wall tablet): one big dim gray clock, tonight/tomorrow, tiles */
+  #nightView { position: fixed; inset: 0; z-index: 30; display: none; flex-direction: column; justify-content: space-between; background: #000; color: #b4b2a9; padding: 4vmin 5vmin 2.4vmin; transition: transform 1s; }
+  body.nv-on #nightView { display: flex; }
+  body.severe-on #nightView { display: none; }
+  #nvTime { font-size: 39vmin; font-weight: 200; line-height: 0.85; letter-spacing: -0.04em; color: #c9c7bf; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #nvTime .ampm { font-size: 8vmin; font-weight: 400; color: #6f6e69; margin-left: 1.6vmin; letter-spacing: 0; }
+  #nvDate { font-size: 5vmin; color: #7a7973; margin-top: 1.4vmin; }
+  body.bars-on #nvTime { font-size: 33vmin; }
+  body.bars-many #nvTime { font-size: 26vmin; }
+  body.bars-many #nvDate { font-size: 3.6vmin; margin-top: 1vmin; }
+  .nv-wx { display: grid; grid-template-columns: 1fr 1.5fr; gap: 5vmin; border-top: 1px solid #2a2a28; padding-top: 2.4vmin; }
+  .nv-wx > div { min-width: 0; }
+  .nv-label { font-size: 2.6vmin; letter-spacing: 0.14em; text-transform: uppercase; color: #6f6e69; }
+  .nv-temp { font-size: 11vmin; font-weight: 300; color: #c9c7bf; display: flex; align-items: center; gap: 2vmin; line-height: 1.15; white-space: nowrap; }
+  .nv-temp .ic { font-size: 8.5vmin; filter: grayscale(1) brightness(0.85); }
+  .nv-temp span { color: #6f6e69; }
+  .nv-text { font-size: 3.3vmin; color: #8a8983; margin-top: 0.4vmin; line-height: 1.3; }
+  .nv-tiles { display: grid; gap: 2vmin; margin-top: 2.6vmin; }
+  .nv-tile { border: 1px solid #3a3a37; border-radius: 2vmin; padding: 1.8vmin 1vmin; color: #8a8983; text-decoration: none; font-size: 2.8vmin; display: flex; align-items: center; justify-content: center; gap: 1.4vmin; white-space: nowrap; }
+  .nv-tile .ic { font-size: 4.4vmin; opacity: 0.5; }
+  .nv-tile:active { background: #1a1a19; }
+  .nv-hint { font-size: 1.9vmin; color: #4a4a47; text-align: right; margin-top: 1vmin; }
+
   /* Portrait layout */
   @media (orientation: portrait) {
     .wrap {
@@ -307,6 +333,15 @@
 <div id="updated"></div>
 <div id="severe"></div>
 <div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div></div>
+
+<div id="nightView">
+  <div class="nv-main" id="nvMain"><div id="nvTime">--:--</div><div id="nvDate"></div></div>
+  <div>
+    <div class="nv-wx" id="nvWx"></div>
+    <div class="nv-tiles" id="nvTiles"></div>
+    <div class="nv-hint">Tap the clock or weather for the full dashboard</div>
+  </div>
+</div>
 
 <div id="dayDetail"><div class="dd-card" id="ddCard"></div></div>
 
@@ -500,6 +535,64 @@
       `<div class="si">${ICONS.moon(moonAge(d))} <b>${MOON_NAMES[moonIndex(d)]}</b></div>`;
   }
 
+  /* ---------- Night view (big dim clock, tonight/tomorrow, tiles) ---------- */
+  const nightOK = CONFIG.nightView === true || (CONFIG.nightView === "tablet" && !!window.fully);
+  const NV_PEEK = 2 * 60 * 1000; // a tap shows the full dashboard for 2 minutes
+  let nightW = null, nightPeekUntil = 0, nightWxHtml = "";
+  (function buildNightTiles() {
+    const box = $("nvTiles");
+    box.style.gridTemplateColumns = `repeat(${CONFIG.tiles.length}, minmax(0, 1fr))`;
+    CONFIG.tiles.forEach((t) => {
+      const el = document.createElement("a");
+      el.className = "nv-tile";
+      el.href = t.url || "#";
+      el.target = "_top";
+      if (t.app) el.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (window.fully && typeof window.fully.startApplication === "function") window.fully.startApplication(t.app);
+      });
+      el.innerHTML = `${ICONS[t.icon] ? ICONS[t.icon]() : ""}<span>${t.label}</span>`;
+      box.appendChild(el);
+    });
+  })();
+  $("nightView").addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest(".nv-tile")) return;
+    nightPeekUntil = Date.now() + NV_PEEK;
+    document.body.classList.remove("nv-on");
+  });
+  // While peeking at the dashboard, every tap keeps it up a little longer
+  document.addEventListener("click", () => { if (nightPeekUntil > Date.now()) nightPeekUntil = Date.now() + NV_PEEK; }, true);
+  function setNightView(isNight) {
+    document.body.classList.toggle("nv-on", nightOK && isNight && Date.now() >= nightPeekUntil);
+  }
+  function renderNightWx() {
+    if (!nightOK || !nightW) return;
+    const now = Date.now();
+    const h = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone: TZ }).format(new Date()));
+    const afterMidnight = h < 12;
+    const hours = nightW.hourly.filter(p => new Date(p.endTime).getTime() > now);
+    const daily = nightW.daily.filter(p => new Date(p.endTime).getTime() > now);
+    const n = daily.find(p => !p.isDaytime);
+    const di = daily.findIndex(p => p.isDaytime), dd = daily[di];
+    const nn = dd ? daily.slice(di + 1).find(p => !p.isDaytime) : null;
+    let left = "", right = "";
+    if (afterMidnight && hours[0]) {
+      const c = hours[0];
+      left = `<div class="nv-label">Now</div><div class="nv-temp">${icon(c.shortForecast, c.isDaytime, c.startTime)}${c.temperature}°</div><div class="nv-text">${c.shortForecast}${n ? " · low " + n.temperature + "°" : ""}</div>`;
+    } else if (n) {
+      left = `<div class="nv-label">Tonight</div><div class="nv-temp">${icon(n.shortForecast, false, n.startTime)}Low ${n.temperature}°</div><div class="nv-text">${n.shortForecast}</div>`;
+    }
+    if (dd) {
+      const v = dd.probabilityOfPrecipitation && dd.probabilityOfPrecipitation.value;
+      const ymd = new Date(dd.startTime).toLocaleDateString("en-CA", { timeZone: TZ }).split("-");
+      const st = sunTimes(+ymd[0], +ymd[1], +ymd[2], CONFIG.lat, CONFIG.lon);
+      const extra = (v ? ` · ${v}% chance of rain` : "") + (st ? ` · sunrise ${fmtTime(st.rise, { hour: "numeric", minute: "2-digit" })}` : "");
+      right = `<div class="nv-label">${afterMidnight ? "Today" : "Tomorrow"}</div><div class="nv-temp">${icon(dd.shortForecast, true, dd.startTime)}${dd.temperature}°${nn ? ` <span>/ ${nn.temperature}°</span>` : ""}</div><div class="nv-text">${dd.shortForecast}${extra}</div>`;
+    }
+    const html = `<div>${left}</div><div>${right}</div>`;
+    if (html !== nightWxHtml) { nightWxHtml = html; $("nvWx").innerHTML = html; }
+  }
+
   /* ---------- Clock + night mode ---------- */
   function tick() {
     const d = new Date();
@@ -509,11 +602,14 @@
     const m = new Intl.DateTimeFormat("en-US", { minute: "2-digit", timeZone: TZ }).format(d).padStart(2, "0");
     $("time").innerHTML = `${h12}:${m}<span class="ampm">${ampm}</span>`;
     $("date").textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
+    if (nightOK) { $("nvTime").innerHTML = $("time").innerHTML; $("nvDate").textContent = $("date").textContent; }
     renderSun(d);
     const night = CONFIG.nightStart > CONFIG.nightEnd
       ? (h >= CONFIG.nightStart || h < CONFIG.nightEnd)
       : (h >= CONFIG.nightStart && h < CONFIG.nightEnd);
     document.body.classList.toggle("night", night);
+    setNightView(night);
+    renderNightWx();
     applyBrightness(d);
   }
 
@@ -538,6 +634,7 @@
   setInterval(() => {
     const x = Math.round(Math.random() * 8 - 4), y = Math.round(Math.random() * 8 - 4);
     $("wrap").style.transform = `translate(${x}px, ${y}px)`;
+    $("nightView").style.transform = `translate(${x}px, ${y}px)`;
   }, 10 * 60 * 1000);
 
   /* ---------- Weather (National Weather Service, free, no key) ---------- */
@@ -620,6 +717,7 @@
     document.body.classList.toggle("bars-on", on);
     document.body.classList.toggle("bars-many", on && [...$("topBars").children].filter(e => e.style.display === "block").length >= 2);
     $("wrap").style.paddingTop = on ? `calc(${h}px + 2.2vmin)` : "";
+    $("nightView").style.paddingTop = on ? `calc(${h}px + 3vmin)` : "";
   }
   window.addEventListener("resize", layoutBars);
 
@@ -703,6 +801,7 @@
     renderNow(hours, w.daily);
     renderWeek(w.daily);
     showFreeze(w.daily);
+    nightW = w; renderNightWx();
     $("updated").textContent = "Weather updated " + fmtTime(new Date(w.at), { hour: "numeric", minute: "2-digit" });
     return true;
   }
