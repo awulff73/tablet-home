@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Home</title>
+<style>
+  /* ============ SETTINGS: edit these ============ */
+  :root {
+    --accent: #6fb3ff;
+    --accent2: #8be3b0;
+  }
+</style>
+<script>
+  const VERSION = "2026-11-16a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const CONFIG = {
+    place: "Madison, AL",
+    // Clock always shows this time zone, even if the tablet's own setting is wrong
+    timeZone: "America/Chicago",
+    lat: 34.6993,
+    lon: -86.7483,
+    // Night mode dims the screen between these hours (24h clock)
+    nightStart: 22,
+    nightEnd: 6,
+    // Night view during night hours: big dim clock, tonight/tomorrow forecast and the tiles. Tap the clock or weather for the full dashboard.
+    // "tablet" = wall tablet only (Fully), true = every screen (fridge too), false = off
+    nightView: "tablet",
+    // Radar shown when you tap the weather (NWS Huntsville radar, KHTX)
+    radarLoop: "https://radar.weather.gov/ridge/standard/KHTX_loop.gif",
+    radarInteractive: "https://radar.weather.gov/station/KHTX/standard",
+    // Severe weather wake-up (needs Fully PLUS with the JavaScript Interface on)
+    // "keepOn": wake and keep the screen on until the alert ends. "once": wake once when it's issued.
+    wakeAlerts: {
+      "Tornado Warning": "keepOn",
+      "Severe Thunderstorm Warning": "keepOn",
+      "Tornado Watch": "once"
+    },
+    // Real screen brightness, 0–255 (needs Fully). Day = sunrise to sunset, evening = sunset to night hours, night = night hours.
+    brightness: { day: 200, evening: 110, night: 35 },
+    // Cold banner: next night's low at or below "light" (°F) = freeze, at or below "hard" = hard freeze.
+    // These plant warnings only show in the "seasons" (MM-DD ranges: spring and fall), not all winter.
+    // "pipes": any time of year, a low at or below this shows a very-cold banner to protect pipes (set to null to turn off).
+    // NWS Frost Advisory (light blue), Freeze Watch/Warning (blue), Hard Freeze Watch/Warning (dark blue) also show it whenever NWS issues them.
+    // "frost": true = in those seasons, also a light-blue frost banner when the next night's forecast mentions frost (e.g. "Areas Of Frost") but isn't a freeze.
+    freeze: { light: 32, hard: 28, seasons: [["03-01", "05-15"], ["10-01", "11-30"]], pipes: 20, frost: true },
+    // Heat banner: the highest "feels like" (heat index) in the coming daytime hours at or above "hot" (°F) = orange, "extreme" = red.
+    // NWS Heat Advisory / Extreme Heat Watch or Warning also show it whenever issued. null = off.
+    heat: { hot: 105, extreme: 110 },
+    // Air quality banner (purple) only when the US AQI reaches this level (101 = "unhealthy for sensitive groups"). null = off.
+    airBanner: 101,
+    // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
+    // day: "Sun".."Sat". nth: 2 = second one of the month. holidayDelay: pushed back a day when a holiday falls on these days that week.
+    pickups: [
+      { label: "Trash", day: "Wed", holidayDelay: ["Mon", "Tue", "Wed"] },
+      { label: "Recycling", day: "Fri", nth: 2 }
+    ],
+    // National holidays that delay pickup (remove any your hauler works through)
+    holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
+    pickupRemind: { eveningFrom: 16, morningUntil: 10 },
+    // Countdown card under the tiles: the next few holidays and family events within daysAhead days.
+    // Holidays (calculated automatically): New Year's Day, Valentine's Day, Easter, Mother's Day, Father's Day, Independence Day, Thanksgiving, Christmas.
+    // Events (inside the locked list): date "YYYY-MM-DD" = one time, "MM-DD" = every year. what (optional) is a label for the list; the background shows it (heart = anniversary, cake = birthday). theme: bday, anniv, trip, event, grad (or a holiday look: xmas, thanks, july4, newyear, easter, mom, dad).
+    countdowns: {
+      show: 3,
+      daysAhead: 60,
+      holidays: ["New Year's Day", "Valentine's Day", "Easter", "Mother's Day", "Father's Day", "Independence Day", "Thanksgiving", "Christmas"],
+      // Family birthdays/anniversaries are locked (this page is public). Each screen asks for the passcode once
+      // (tap the countdown card) and remembers it. To change them, tell Claude in chat — it re-locks the list.
+      events: [],
+      locked: {"s":"GqigS3HaB19n5USF4geJJw==","i":"dKs3588ukVq6cabq","c":"7pCt5G86eLRHMGL03riZsvid9YW1AJeKxKZOh3P0Ge1om0tQfBiQ5mj67W6wa/5RQHgtb2QOLmO6Xp5rqcYHnB/0qCLmmjWN7eQIpQQpvGomRz1PcIo9yQ5O7edm74j+qa3X7Pp1xXjmv8RK4QZf+oLpS+gcSzjzpFCmtUszN+ST90b3g7I7K7uZmGGp79VikN011RE7SwiHwUrG2Otcdk5Flpe0sUj4iOEj3Ym8IJf0PzI/iTLI9xTI5zZ1+XnrwetNtJpHn/02hxg6ACu7zfUH6PaoeLSuB6j8n74qOw/ttsxGBcUy5PaxXhBSxMMn02X+rlpFeh9RrOrAnZtQuo6ZUMU/IccdkjVTLH7nQUr7Vuw3DrGjR9y8dL4xY5klfTSQUTV5Z6BBqiKLwFaZDkmuWcitdA+/lUbVdfwTQA9gAgm2shczRRBspuQoPt34wYejU86uuLMFjILBcTreVumABIpwbYr2SWx9RRbUFoyZ8vpdnkGOzWunR0AjaK+6V9zpqS6yP3Ki0V6XWIoM4R3YUAIgAyweY9bCIwSrkUNQlfedGLSQV4T2TXwK+8NgegwiqCwsUhGJWp8y1sMWq2XAh2JTFmIxjOBx8mit8yj5lJtmwPFI9sGOFBNM4Qw8tW55rdI2ERqUgDYS7koKoY/jZmj7VfZlBU+TPOeDKnmWeEpkq1EqMRpReGqerwv7pcqx1N76jUOEZC9KjLMIqlvtfCdIMEmEYAiWe5pltLf6b/k4e/0AzUjkYs7/ucXa5Pgu2hjAL6qe5wsw5DEqsOOMIaBlsiOPXbHABZI1kpZBoie7LGSzxT5SoS/EZg/gQylUwdFD9Bdztk4k7WL1fj4oRcwUj5oFypFO8inTp+/hKBl3uDHjEMd6ril+KOExQD1lHQAqviWhhFS30cDbZif5i1VZNfFiNh3V0TKyKbkF0BcX5xDYCyU4vQoGwXLft6DwM9U4T1ovLEhrpma0O7EHi+2dJZ559HFdYXtXTd1Mf31WI0BczlP+l1ZuZs0IbXqJbtYPhf041ZDOXRZxYM06N+sOhEQl69rrkfIUdoiwDAdCqxpyEb5tevtprc4CY7TZE2Okd7g3svorj6HccUKLiLqzw8UThC4RTYXn09Xi3Xxc4NHgttBWX40reVOxUzNAT3GhAXiOHU0WIQawHjTXYIWzVQPg2KpkftLGVwXXFJwOl6uPoTz0sZGzMo5uKhKeX4xqEy9dYruaMt2rgOKF2esaEegYeFdSjWFIYcsK41nMg01tYhMCwWQELmtAjB+e56C/N+iRuceiRf4t/l6tx2JqBJGjpl7HHDJYVKPD7M0A5FhbM8RthxLJTNAlo29rngG65qMI3WArfCkZZQbiEOPBSber/scJWpWXyv0HaHLyrQp5yTOwkSqxdT+ewbmTfLMHPL4sTXab8gtoGBS2SM9agFDnUN3tol4/iZDADsXbioud+10tKVi+lzkTwmrWDwV9lE/mxgxHL//XihqTwxymJiN/3brN61hKH3lI3KmuG79G+YmaU+iqwCtAxraax4QWtQDfX+ar71gB"}
+    },
+    // Christmas look: starry night sky; an Advent wreath beside the clock by day (one more candle each Advent Sunday, all lit on Christmas)
+    // and the Star of Bethlehem + nativity scene on the night view. From the day after Thanksgiving through Dec 26, on every screen. false = off.
+    // Preview any time by adding ?theme=xmas to the page address (?theme=off forces it off).
+    christmas: true,
+    // Rain totals line under the rain timing line: past 24 hours and past 7 days (Open-Meteo estimate). false = off.
+    rainTotals: true,
+    // Rain timing line under current conditions: an hour counts as "rain" at this chance (%) or higher; looks this many hours ahead
+    rainLine: { chance: 40, hoursAhead: 12 },
+    tiles: [
+      { label: "Home Controls", sub: "Lights, locks & devices", icon: "home", url: "https://my.smartthings.com/", color: "#2b6cb0" },
+      // chrome: true = open this tile in the Chrome app instead of inside Fully (Wyze won't sign in inside Fully). Back returns to this page.
+      { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a", chrome: true },
+      { label: "Thermostat",    sub: "ecobee",                  icon: "thermo", url: "https://www.ecobee.com/login/", color: "#b7791f" },
+      { label: "Water",         sub: "Flume",                   icon: "water",  url: "https://portal.flumewater.com/", color: "#0e7490" }
+    ]
+  };
+</script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    /* Day: deep slate with a soft sky-blue / violet glow in the corners */
+    background:
+      radial-gradient(circle at 15% 10%, rgba(56,189,248,0.18), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(167,139,250,0.16), transparent 45%),
+      #0b1120;
+    background-attachment: fixed;
+    color: #e8edf4;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: filter 2s;
+  }
+  body.night { filter: brightness(0.45); background: #000; } /* Night (10 PM–6 AM): true black, least light in a dark room */
+  body.night .card { background: rgba(255,255,255,0.06); }
+  body.night.hwdim { filter: brightness(0.85); } /* the screen itself is dimmed, so only a little extra */
+
+  .wrap {
+    height: 100vh; padding: 2.2vmin 2.6vmin;
+    display: grid; gap: 2.2vmin;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "clock  tiles"
+      "now    tiles"
+      "week   week";
+    transition: transform 1s;
+  }
+  .card {
+    background: rgba(255,255,255,0.045);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 2.4vmin;
+    padding: 2.2vmin 2.6vmin;
+  }
+
+  /* Clock */
+  .clock { grid-area: clock; padding-top: 0.5vmin; }
+  #time { font-size: 19vmin; font-weight: 200; line-height: 0.95; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+  #time .ampm { font-size: 6vmin; font-weight: 400; color: #9fb0c6; margin-left: 1.2vmin; letter-spacing: 0; }
+  #date { font-size: 4vmin; color: #b8c6d8; margin-top: 1vmin; }
+  #sun { display: flex; flex-wrap: wrap; gap: 0.6vmin 2.4vmin; margin-top: 1vmin; font-size: 2.6vmin; color: #b8c6d8; }
+  #sun .si { display: flex; align-items: center; gap: 0.8vmin; white-space: nowrap; transition: opacity 1s; }
+  #sun .si b { font-weight: 600; color: #e8edf4; }
+  #sun .si.past { opacity: 0.45; }
+  #extras { display: flex; flex-wrap: wrap; gap: 0.8vmin; margin-top: 1vmin; }
+  #extras:empty { display: none; }
+  body.busy #time { font-size: 15vmin; }   /* 3+ chips: shrink the clock so the weather card keeps its room */
+  body.busy #date { font-size: 3.4vmin; margin-top: 0.6vmin; }
+  body.busy #sun { margin-top: 0.6vmin; }
+  .chip { display: flex; align-items: center; gap: 0.8vmin; font-size: 2.1vmin; color: #cfdae8; padding: 0.4vmin 1.3vmin; border-radius: 99px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); white-space: nowrap; }
+  .chip i { width: 1.5vmin; height: 1.5vmin; border-radius: 50%; display: inline-block; }
+
+  /* Alerts */
+  #alerts { margin-top: 1.6vmin; display: none; }
+  .alert {
+    background: #7a1d1d; border: 1px solid #c53030; color: #fff;
+    border-radius: 1.6vmin; padding: 1.2vmin 1.8vmin; font-size: 2.6vmin; font-weight: 600;
+    margin-bottom: 1vmin; display: flex; gap: 1.2vmin; align-items: center;
+  }
+  .alert.moderate { background: #744210; border-color: #d69e2e; }
+  #severe {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 70; display: none;
+    padding: 1.6vmin 2.6vmin; font-size: 4vmin; font-weight: 800; color: #fff; text-align: center;
+    background: #b91c1c; border-bottom: 0.6vmin solid #fecaca; letter-spacing: 0.02em;
+    animation: sevPulse 1.6s ease-in-out infinite;
+  }
+  /* Notice banners across the top (freeze, no connection, unplugged) — they stack */
+  #topBars { position: fixed; left: 0; right: 0; top: 0; z-index: 40; }
+  #topBars .bar {
+    display: none; padding: 1vmin 2.6vmin; font-size: 2.8vmin; font-weight: 700; color: #fff; text-align: center;
+    letter-spacing: 0.01em; border-bottom: 0.4vmin solid rgba(255,255,255,0.45);
+  }
+  #topBars .bar .ic { margin-right: 1vmin; }
+  #freezeBar.frost { background: #7dd3fc; color: #0c2d48; border-bottom-color: #0369a1; }  /* frost advisory: light blue */
+  #freezeBar.freeze { background: #2563eb; }   /* freeze: medium blue */
+  #freezeBar.hard, #freezeBar.pipes { background: #1e3a8a; }     /* hard freeze / very cold: dark blue */
+  #trashBar { background: #78350f; }
+  #netBar { background: #b45309; }
+  #powerBar { background: #9a3412; }
+  #powerBar.low { background: #b91c1c; }
+  #airBar { background: #6b21a8; }          /* air quality: purple */
+  #airBar.bad { background: #86198f; }      /* unhealthy or worse: magenta-purple */
+  #heatBar { background: #c2410c; }         /* heat: orange */
+  #heatBar.extreme { background: #991b1b; } /* extreme heat: dark red */
+  #severe { cursor: pointer; }
+  #severe small b { font-weight: 700; text-decoration: underline; }
+  #alerts { cursor: pointer; }
+  /* Tornado Emergency: fast pulse between magenta and black */
+  #severe.tornado.emergency { animation: emPulse 0.9s ease-in-out infinite; border-bottom-color: #fff; }
+  @keyframes emPulse { 50% { background: #1a0020; } }
+  /* Alert details panel (tap the warning banner) — above the radar and the banner */
+  #sevDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 80; display: none; background: rgba(4,7,12,0.86); align-items: center; justify-content: center; padding: 4vmin; }
+  #sevDetail.open { display: flex; }
+  .sd-card { width: 92vw; width: min(92vw, 160vmin); }
+  .sd-alert { border-top: 1px solid rgba(255,255,255,0.1); padding: 2vmin 0; }
+  .sd-event { font-size: 4vmin; font-weight: 800; color: #fca5a5; letter-spacing: 0.02em; }
+  .sd-event.emergency { color: #f0abfc; }
+  .sd-meta { font-size: 2.6vmin; color: #cbd5e1; margin: 0.4vmin 0 1.4vmin; }
+  .sd-do { background: rgba(185,28,28,0.25); border: 1px solid rgba(248,113,113,0.45); border-radius: 1.6vmin; padding: 1.6vmin 2vmin; margin-bottom: 1.6vmin; }
+  .sd-label { font-size: 2.2vmin; letter-spacing: 0.12em; text-transform: uppercase; color: #fecaca; margin-bottom: 0.6vmin; font-weight: 700; }
+  .sd-do p { font-size: 3vmin; line-height: 1.4; font-weight: 600; }
+  .sd-text p { font-size: 2.6vmin; line-height: 1.45; color: #dbe4ef; margin-bottom: 1.2vmin; }
+  .sd-area { font-size: 2.1vmin; color: #8fa1b8; }
+  body.bars-on #time { font-size: 16vmin; }
+  body.bars-on.busy #time { font-size: 13.5vmin; }
+  body.bars-many #time { font-size: 11vmin; }   /* 2+ banners: keep the weather card from being squeezed */
+  body.bars-many #date { font-size: 3vmin; margin-top: 0.4vmin; }
+  body.bars-many #sun { margin-top: 0.4vmin; }
+  body.bars-many .hour .i { font-size: 3vmin; margin: 0; }
+  body.severe-on #topBars { display: none; }
+  /* Tornado Warning: pulsing magenta-purple · Severe Thunderstorm Warning: pulsing orange · Tornado Watch: steady red */
+  #severe.tornado { background: #a21caf; border-bottom-color: #f5d0fe; animation: torPulse 1.6s ease-in-out infinite; }
+  #severe.tstorm { background: #ea580c; border-bottom-color: #fed7aa; animation: tsPulse 1.6s ease-in-out infinite; }
+  #severe.watch { background: #b91c1c; border-bottom-color: #fecaca; animation: none; }
+  @keyframes torPulse { 50% { background: #581c87; } }
+  @keyframes tsPulse { 50% { background: #9a3412; } }
+  #severe small { display: block; font-size: 2.4vmin; font-weight: 500; opacity: 0.9; margin-top: 0.4vmin; }
+  @keyframes sevPulse { 50% { background: #7f1d1d; } }
+  body.severe-on #radar { padding-top: 13vmin; }
+  .alert.minor { background: #2c3e50; border-color: #4a6785; }
+
+  /* Current conditions */
+  .now { grid-area: now; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; }
+  .now-top { display: flex; align-items: center; gap: 2.6vmin; }
+  #nowIcon { font-size: 10vmin; line-height: 1; }
+  #nowTemp { font-size: 10vmin; font-weight: 300; line-height: 1; }
+  #nowTemp sup { font-size: 5vmin; vertical-align: top; }
+  #nowText { font-size: 3.4vmin; color: #cfdae8; }
+  #nowMeta { font-size: 2.4vmin; color: #8fa1b8; margin-top: 0.6vmin; }
+  #nowRain { font-size: 2.5vmin; color: var(--accent); margin-top: 0.8vmin; }
+  #nowRain:empty { display: none; }
+  #nowRain .ic { margin-right: 0.6vmin; }
+  #nowRain.wet { color: #93c5fd; font-weight: 600; }
+  #nowTot { font-size: 2.2vmin; color: #8fa1b8; margin-top: 0.5vmin; }
+  #nowTot:empty { display: none; }
+  #trashBar { cursor: pointer; }
+  #trashBar u { font-weight: 500; text-underline-offset: 0.3vmin; }
+  .place { font-size: 2.2vmin; color: #7d8ea5; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.6vmin; }
+  .hourly { display: flex; gap: 1vmin; margin-top: 1vmin; overflow: hidden; }
+  .hour { flex: 1; text-align: center; min-width: 0; }
+  .hour .h { font-size: 2vmin; color: #8fa1b8; }
+  .hour .i { font-size: 3.6vmin; margin: 0.3vmin 0; }
+  .hour .t { font-size: 2.6vmin; font-weight: 600; }
+  .hour .p { font-size: 1.8vmin; color: var(--accent); min-height: 2.2vmin; }
+
+  /* Tiles */
+  .tiles { grid-area: tiles; display: grid; gap: 2.2vmin; grid-auto-rows: 1fr; }
+  .tiles.grid2 { grid-template-columns: 1fr 1fr; }
+  .tiles.grid2 .tile { flex-direction: column; justify-content: center; text-align: center; gap: 1.2vmin; padding: 2vmin; }
+  .tiles.grid2 .tile .arrow { display: none; }
+  .tiles.grid2 .tile .tl { font-size: 4.2vmin; white-space: nowrap; }
+  .tiles.grid2 .tile .ts { font-size: 2.2vmin; }
+  .tile {
+    border-radius: 2.8vmin; border: 1px solid rgba(255,255,255,0.12);
+    display: flex; align-items: center; gap: 3vmin; padding: 0 4vmin;
+    cursor: pointer; position: relative; overflow: hidden;
+    color: inherit; text-decoration: none;
+    box-shadow: 0 1vmin 3vmin rgba(0,0,0,0.35);
+    transition: transform 0.12s, filter 0.12s;
+  }
+  .tile:active { transform: scale(0.97); filter: brightness(1.2); }
+  .tile .ti { font-size: 10vmin; line-height: 1; }
+  .tile .tl { font-size: 5vmin; font-weight: 650; }
+  .tile .ts { font-size: 2.6vmin; opacity: 0.8; margin-top: 0.5vmin; }
+  .tile .arrow { position: absolute; right: 3vmin; font-size: 5vmin; opacity: 0.5; }
+  .tile.loading::after {
+    content: "Opening…"; position: absolute; top: 0; right: 0; bottom: 0; left: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,0.55); font-size: 4vmin; font-weight: 600;
+  }
+
+  /* 7-day */
+  .week { grid-area: week; display: flex; gap: 1vmin; }
+  .day { flex: 1; text-align: center; padding: 1.4vmin 0.6vmin; border-radius: 1.8vmin; min-width: 0; }
+  .day.today { background: rgba(111,179,255,0.12); }
+  .day .d { font-size: 2.4vmin; color: #b8c6d8; font-weight: 600; }
+  .day .i { font-size: 5.4vmin; margin: 0.6vmin 0; }
+  .day .t { font-size: 2.6vmin; font-weight: 650; }
+  .day .t span { color: #7d8ea5; font-weight: 400; margin-left: 0.6vmin; }
+  .day .p { font-size: 1.9vmin; color: var(--accent); min-height: 2.3vmin; }
+
+  .muted { color: #6b7a90; font-size: 2.4vmin; }
+  .ic { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; }
+  .ic svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  #sun .ic { font-size: 1.25em; }
+
+  /* Tap weather for radar */
+  .now, .week { cursor: pointer; position: relative; transition: transform 0.12s, background 0.12s; }
+  .now:active, .week:active { transform: scale(0.985); background: rgba(255,255,255,0.08); }
+  .radar-hint {
+    position: absolute; top: 1.8vmin; right: 2.2vmin;
+    font-size: 2.2vmin; font-weight: 600; color: var(--accent);
+    background: rgba(111,179,255,0.12); border: 1px solid rgba(111,179,255,0.3);
+    border-radius: 99px; padding: 0.5vmin 1.6vmin;
+  }
+
+  /* Radar overlay */
+  #radar {
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 50; display: none;
+    background: rgba(6,9,14,0.96); flex-direction: column;
+    padding: 2vmin 2.6vmin;
+  }
+  #radar.open { display: flex; }
+  .radar-bar { display: flex; align-items: center; gap: 2vmin; margin-bottom: 1.6vmin; }
+  .radar-title { font-size: 3.4vmin; font-weight: 650; flex: 1; }
+  .radar-title small { display: block; font-size: 2vmin; font-weight: 400; color: #8fa1b8; margin-top: 0.3vmin; }
+  .rbtn {
+    font: inherit; font-size: 2.6vmin; font-weight: 600; color: #e8edf4; text-decoration: none;
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 1.6vmin; padding: 1.4vmin 2.6vmin; cursor: pointer;
+  }
+  .rbtn.close { background: #2b6cb0; border-color: #4a8fd8; min-width: 16vmin; }
+  .radar-img { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  .radar-img img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 1.2vmin; }
+  #radarMsg { color: #8fa1b8; font-size: 3vmin; text-align: center; }
+
+  /* Day details (tap a day in the 7-day strip) */
+  .day { cursor: pointer; }
+  .day:active { background: rgba(255,255,255,0.1); }
+  #dayDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
+  #dayDetail.open { display: flex; }
+  .dd-card { background: #111a2e; border: 1px solid rgba(255,255,255,0.14); border-radius: 2.6vmin; width: 92vw; width: min(92vw, 150vmin); max-height: 88vh; overflow: auto; padding: 3vmin 3.4vmin; box-shadow: 0 2vmin 6vmin rgba(0,0,0,0.5); }
+  .dd-head { display: flex; align-items: center; gap: 2vmin; margin-bottom: 2vmin; }
+  .dd-title { flex: 1; font-size: 4.4vmin; font-weight: 700; }
+  .dd-part { display: flex; gap: 2.6vmin; padding: 2vmin 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .dd-part .ic { font-size: 9vmin; flex: none; }
+  .dd-label { font-size: 2.4vmin; color: #8fa1b8; text-transform: uppercase; letter-spacing: 0.1em; }
+  .dd-temp { font-size: 4.2vmin; font-weight: 650; margin: 0.4vmin 0; }
+  .dd-temp span { font-size: 2.6vmin; font-weight: 500; color: var(--accent); margin-left: 1.4vmin; }
+  .dd-text { font-size: 2.9vmin; line-height: 1.4; color: #dbe4ef; }
+  body.night .dd-card { background: #0a0a0a; }
+  /* Next 24 hours (tap the hourly strip) */
+  .hourly { cursor: pointer; }
+  #hrDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 3vmin; }
+  #hrDetail.open { display: flex; }
+  .hr-card { width: 94vw; width: min(94vw, 165vmin); }
+  .hr-row { display: flex; }
+  .hr-row > div { flex: 1; min-width: 0; text-align: center; white-space: nowrap; }
+  .hr-time { font-size: 2.1vmin; color: #8fa1b8; height: 3vmin; }
+  .hr-time b { color: #e8edf4; }
+  .hr-icon { font-size: 4.6vmin; height: 5.6vmin; }
+  .hr-chart { position: relative; height: 26vmin; margin: 3.4vmin 0 1vmin; }
+  .hr-chart svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+  .hr-t { position: absolute; transform: translate(-50%, -150%); font-size: 2.7vmin; font-weight: 650; white-space: nowrap; }
+  .hr-dot { position: absolute; width: 1.3vmin; height: 1.3vmin; margin: -0.65vmin 0 0 -0.65vmin; border-radius: 50%; background: #fbbf24; }
+  .hr-rain { height: 8vmin; align-items: flex-end; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .hr-rain > div { margin: 0 0.25vmin; background: rgba(96,165,250,0.75); border-radius: 0.6vmin 0.6vmin 0 0; }
+  .hr-pop { font-size: 1.9vmin; color: var(--accent); height: 2.8vmin; padding-top: 0.4vmin; }
+  .hr-mid { border-left: 1px dashed rgba(255,255,255,0.18); }
+  .hr-sum { font-size: 2.6vmin; color: #cfdae8; margin-top: 1.4vmin; }
+  .hr-legend { font-size: 2vmin; color: #8fa1b8; margin: 0.6vmin 0 0.4vmin; }
+  #toast { position: fixed; left: 50%; bottom: 4vmin; transform: translateX(-50%); z-index: 60; background: #1f2937; border: 1px solid #4b5563; color: #fff; font-size: 2.6vmin; padding: 1.6vmin 2.8vmin; border-radius: 1.6vmin; opacity: 0; pointer-events: none; transition: opacity .3s; max-width: 80vw; text-align: center; }
+  #toast.show { opacity: 1; }
+  #updated { position: fixed; right: 2.6vmin; bottom: 0.6vmin; font-size: 1.5vmin; color: #4f5d70; }
+
+  /* Night view (night hours, wall tablet): one big dim gray clock, tonight/tomorrow, tiles */
+  #nightView { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; display: none; flex-direction: column; justify-content: space-between; background: #000; color: #b4b2a9; padding: 4vmin 5vmin 2.4vmin; transition: transform 1s; }
+  body.nv-on #nightView { display: flex; }
+  body.severe-on #nightView { display: none; }
+  #nvTime { font-size: 39vmin; font-weight: 200; line-height: 0.85; letter-spacing: -0.04em; color: #c9c7bf; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #nvTime .ampm { font-size: 8vmin; font-weight: 400; color: #6f6e69; margin-left: 1.6vmin; letter-spacing: 0; }
+  #nvDate { font-size: 5vmin; color: #7a7973; margin-top: 1.4vmin; }
+  body.bars-on #nvTime { font-size: 33vmin; }
+  body.bars-many #nvTime { font-size: 26vmin; }
+  body.bars-many #nvDate { font-size: 3.6vmin; margin-top: 1vmin; }
+  .nv-wx { display: grid; grid-template-columns: 1fr 1.5fr; gap: 5vmin; border-top: 1px solid #2a2a28; padding-top: 2.4vmin; }
+  .nv-wx > div { min-width: 0; }
+  .nv-label { font-size: 2.6vmin; letter-spacing: 0.14em; text-transform: uppercase; color: #6f6e69; }
+  .nv-temp { font-size: 11vmin; font-weight: 300; color: #c9c7bf; display: flex; align-items: center; gap: 2vmin; line-height: 1.15; white-space: nowrap; }
+  .nv-temp .ic { font-size: 8.5vmin; filter: grayscale(1) brightness(0.85); }
+  .nv-temp span { color: #6f6e69; }
+  .nv-text { font-size: 3.3vmin; color: #8a8983; margin-top: 0.4vmin; line-height: 1.3; }
+  .nv-tiles { display: grid; gap: 2vmin; margin-top: 2.6vmin; }
+  .nv-tile { border: 1px solid #3a3a37; border-radius: 2vmin; padding: 1.8vmin 1vmin; color: #8a8983; text-decoration: none; font-size: 2.8vmin; display: flex; align-items: center; justify-content: center; gap: 1.4vmin; white-space: nowrap; }
+  .nv-tile .ic { font-size: 4.4vmin; opacity: 0.5; }
+  .nv-tile:active { background: #1a1a19; }
+  .nv-hint { font-size: 1.9vmin; color: #4a4a47; text-align: right; margin-top: 1vmin; }
+
+  /* Countdown card under the tiles (shown only when something is coming up) */
+  #cd { grid-area: cd; display: none; flex-direction: column; justify-content: center; padding: 1.6vmin 2.2vmin; min-width: 0; }
+  body.cd-on #cd { display: flex; }
+  body.cd-on .wrap { grid-template-rows: auto 1fr auto auto; grid-template-areas: "clock tiles" "now tiles" "now cd" "week week"; }
+  #cd .cd-h { font-size: 1.9vmin; letter-spacing: 0.12em; text-transform: uppercase; color: #7d8ea5; margin-bottom: 1vmin; }
+  #cdRow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 1.4vmin; gap: 1.4vmin; }
+  .cdi { display: flex; align-items: center; border-radius: 1.6vmin; padding: 2.4vmin 1.2vmin; min-height: 11vmin; border: 1px solid rgba(255,255,255,0.14); min-width: 0; overflow: hidden; background: linear-gradient(135deg, #234e52, #1a2e35); }
+  .cdn { font-size: 5.5vmin; font-weight: 300; line-height: 1; text-align: center; margin-right: 0.9vmin; flex: none; color: #e8edf4; }
+  .cdn .ic { font-size: 5vmin; }
+  .cdt { min-width: 0; }
+  .cdl { font-size: 2vmin; font-weight: 650; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cdd { font-size: 1.9vmin; margin-top: 0.3vmin; color: rgba(255,255,255,0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cd { cursor: pointer; }
+  #cd:active { transform: scale(0.985); }
+  #cdDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
+  #cdDetail.open { display: flex; }
+  .cd-lock { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 1.6vmin; margin-bottom: 1vmin; padding: 2vmin; border: 1px dashed #4b5563; border-radius: 1.6vmin; color: #cbd5e1; font-size: 2.4vmin; }
+  .cd-lock-t { flex: 1 1 100%; }
+  #cdPass { font-size: 2.8vmin; padding: 1.2vmin 1.6vmin; border-radius: 1.2vmin; border: 1px solid #4b5563; background: #0f172a; color: #fff; width: 30vmin; }
+  .cda-card { width: 92vw; width: min(92vw, 160vmin); }
+  .cda-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-gap: 1.6vmin; gap: 1.6vmin; }
+  .cda-month { grid-column: 1 / -1; font-size: 2.2vmin; letter-spacing: 0.12em; text-transform: uppercase; color: #8fa1b8; margin-top: 1.2vmin; padding-bottom: 0.4vmin; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .cda-month:first-child { margin-top: 0; }
+  .cdi.cda { min-height: 13vmin; padding: 2vmin 1.8vmin; }
+  .cdi.cda .cdn { font-size: 6.5vmin; min-width: 10vmin; margin-right: 1.6vmin; }
+  .cdi.cda .cdn small { display: block; font-size: 1.7vmin; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin-top: 0.4vmin; }
+  .cdi.cda .cdl { font-size: 2.6vmin; }
+  .cdi.cda .cdd { font-size: 2vmin; white-space: normal; }
+  @media (orientation: portrait) { .cda-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .cdi.today { box-shadow: 0 0 2.4vmin rgba(251,211,141,0.35); border-color: rgba(251,211,141,0.55); }
+  .cdi.today .cdd { color: #fefcbf; font-weight: 700; }
+  .cdi.cd-thanks { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22%23f6ad55%22%20opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M98%206c13%205%2019%2018%2014%2030-11-3-19-11-21-22%202-4%204-6%207-8z%22/%3E%3Cpath%20d%3D%22M80%2033c10%202%2015%2011%2013%2021-9-1-14-8-16-15%201-3%202-5%203-6z%22/%3E%3Cpath%20d%3D%22M60%2010c8%201%2012%208%2011%2015-7-1-11-6-12-11z%22%20opacity%3D%22.7%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #7b341e,#3c1d0f); } .cdi.cd-thanks .cdn { color: #fbd38d; }
+  .cdi.cd-trip { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cpath%20d%3D%22M40%2052c22-4%2040-14%2054-28%22%20fill%3D%22none%22%20stroke%3D%22%2390cdf4%22%20stroke-width%3D%222%22%20stroke-dasharray%3D%223%205%22%20opacity%3D%22.5%22%20stroke-linecap%3D%22round%22/%3E%3Cg%20fill%3D%22%2390cdf4%22%20opacity%3D%22.6%22%20transform%3D%22translate%2898%2020%29%20rotate%28-35%29%22%3E%3Cpath%20d%3D%22M-12%200h24l6%200-6%202h-24z%22/%3E%3Cpath%20d%3D%22M-2%200l-6-10h4l9%2010z%22/%3E%3Cpath%20d%3D%22M-2%201l-6%2010h4l9-10z%22/%3E%3Cpath%20d%3D%22M-12%200l-3-5h3l3%205z%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1e3a5f,#0f1f33); } .cdi.cd-trip .cdn { color: #bee3f8; }
+  .cdi.cd-xmas { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.5%22%3E%3Cpath%20d%3D%22M100%204l13%2021h-7l10%2016h-8l9%2014h-34l9-14h-8l10-16h-7z%22%20fill%3D%22%2368d391%22/%3E%3Cpath%20d%3D%22M100%200l1.6%203.4%203.7.4-2.8%202.5.8%203.7-3.3-1.9-3.3%201.9.8-3.7-2.8-2.5%203.7-.4z%22%20fill%3D%22%23fbd38d%22/%3E%3Ccircle%20cx%3D%2293%22%20cy%3D%2230%22%20r%3D%222.2%22%20fill%3D%22%23fc8181%22/%3E%3Ccircle%20cx%3D%22108%22%20cy%3D%2244%22%20r%3D%222.2%22%20fill%3D%22%23fbd38d%22/%3E%3Ccircle%20cx%3D%2296%22%20cy%3D%2248%22%20r%3D%222%22%20fill%3D%22%2390cdf4%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23fff%22%20opacity%3D%22.35%22%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2212%22%20r%3D%221.5%22/%3E%3Ccircle%20cx%3D%2274%22%20cy%3D%2240%22%20r%3D%221.2%22/%3E%3Ccircle%20cx%3D%2256%22%20cy%3D%2250%22%20r%3D%221%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #22543d,#5c1a1a); } .cdi.cd-xmas .cdn { color: #c6f6d5; }
+  .cdi.cd-bday { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.6%22%3E%3Crect%20x%3D%2288%22%20y%3D%2234%22%20width%3D%2226%22%20height%3D%2218%22%20rx%3D%223%22%20fill%3D%22%23fbb6ce%22/%3E%3Crect%20x%3D%2288%22%20y%3D%2240%22%20width%3D%2226%22%20height%3D%223%22%20fill%3D%22%23f687b3%22/%3E%3Crect%20x%3D%2294%22%20y%3D%2226%22%20width%3D%222.5%22%20height%3D%228%22%20fill%3D%22%23fbd38d%22/%3E%3Crect%20x%3D%22100%22%20y%3D%2224%22%20width%3D%222.5%22%20height%3D%2210%22%20fill%3D%22%2390cdf4%22/%3E%3Crect%20x%3D%22106%22%20y%3D%2226%22%20width%3D%222.5%22%20height%3D%228%22%20fill%3D%22%2368d391%22/%3E%3C/g%3E%3Cg%20opacity%3D%22.55%22%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2210%22%20r%3D%222%22%20fill%3D%22%23fbd38d%22/%3E%3Ccircle%20cx%3D%2272%22%20cy%3D%2222%22%20r%3D%221.6%22%20fill%3D%22%2390cdf4%22/%3E%3Crect%20x%3D%2266%22%20y%3D%2246%22%20width%3D%223%22%20height%3D%226%22%20fill%3D%22%2368d391%22%20transform%3D%22rotate%2830%2067%2049%29%22/%3E%3Ccircle%20cx%3D%2280%22%20cy%3D%228%22%20r%3D%221.6%22%20fill%3D%22%23f687b3%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #702459,#2a1033); } .cdi.cd-bday .cdn { color: #fed7e2; }
+  .cdi.cd-newyear { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22%23fbd38d%22%20opacity%3D%22.55%22%3E%3Cpath%20d%3D%22M96%2014l2%206%206%202-6%202-2%206-2-6-6-2%206-2z%22/%3E%3Cpath%20d%3D%22M110%2034l1.4%204%204%201.4-4%201.4-1.4%204-1.4-4-4-1.4%204-1.4z%22/%3E%3Cpath%20d%3D%22M80%2040l1%203%203%201-3%201-1%203-1-3-3-1%203-1z%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23e2e8f0%22%20opacity%3D%22.35%22%3E%3Ccircle%20cx%3D%2266%22%20cy%3D%2212%22%20r%3D%221.2%22/%3E%3Ccircle%20cx%3D%2272%22%20cy%3D%2250%22%20r%3D%221%22/%3E%3Ccircle%20cx%3D%22116%22%20cy%3D%2210%22%20r%3D%221%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1a202c,#2d3748); } .cdi.cd-newyear .cdn { color: #fefcbf; }
+  .cdi.cd-easter { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2246%22%20r%3D%2216%22%20fill%3D%22%23fbd38d%22%20opacity%3D%22.25%22/%3E%3Cpath%20d%3D%22M62%2060c14-10%2036-14%2058-8v8z%22%20fill%3D%22%239ae6b4%22%20opacity%3D%22.35%22/%3E%3Cg%20fill%3D%22%23faf5ff%22%20opacity%3D%22.6%22%3E%3Crect%20x%3D%2298%22%20y%3D%2216%22%20width%3D%224%22%20height%3D%2234%22%20rx%3D%221%22/%3E%3Crect%20x%3D%2290%22%20y%3D%2224%22%20width%3D%2220%22%20height%3D%224%22%20rx%3D%221%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #44337a,#2a1f4a); } .cdi.cd-easter .cdn { color: #e9d8fd; }
+  .cdi.cd-mom { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.55%22%3E%3Cg%20fill%3D%22%23fbb6ce%22%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2222%22%20r%3D%225%22/%3E%3Ccircle%20cx%3D%22108%22%20cy%3D%2227%22%20r%3D%225%22/%3E%3Ccircle%20cx%3D%22105%22%20cy%3D%2236%22%20r%3D%225%22/%3E%3Ccircle%20cx%3D%2295%22%20cy%3D%2236%22%20r%3D%225%22/%3E%3Ccircle%20cx%3D%2292%22%20cy%3D%2227%22%20r%3D%225%22/%3E%3C/g%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2229%22%20r%3D%224%22%20fill%3D%22%23fbd38d%22/%3E%3Cpath%20d%3D%22M100%2040v18%22%20stroke%3D%22%239ae6b4%22%20stroke-width%3D%222.5%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23fbb6ce%22%20opacity%3D%22.35%22%3E%3Ccircle%20cx%3D%2270%22%20cy%3D%2214%22%20r%3D%223%22/%3E%3Ccircle%20cx%3D%2278%22%20cy%3D%2246%22%20r%3D%222.5%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #97266d,#521b41); } .cdi.cd-mom .cdn { color: #fed7e2; }
+  .cdi.cd-dad { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.5%22%20fill%3D%22%2390cdf4%22%3E%3Cpath%20d%3D%22M100%2010l6%206-6%2034-6-34z%22/%3E%3Cpath%20d%3D%22M94%2010h12l-2%206h-8z%22%20fill%3D%22%23bee3f8%22/%3E%3C/g%3E%3Cg%20stroke%3D%22%2390cdf4%22%20stroke-width%3D%221.5%22%20opacity%3D%22.3%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M60%2012h20M60%2018h14%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #2a4365,#1a202c); } .cdi.cd-dad .cdn { color: #bee3f8; }
+  .cdi.cd-july4 { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.55%22%3E%3Cg%20stroke%3D%22%23fc8181%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M100%2026l0-12M100%2026l10-6M100%2026l10%206M100%2026l0%2012M100%2026l-10%206M100%2026l-10-6%22/%3E%3C/g%3E%3Cg%20stroke%3D%22%2390cdf4%22%20stroke-width%3D%221.6%22%20stroke-linecap%3D%22round%22%3E%3Cpath%20d%3D%22M78%2044l0-7M78%2044l6-3.5M78%2044l6%203.5M78%2044l0%207M78%2044l-6%203.5M78%2044l-6-3.5%22/%3E%3C/g%3E%3C/g%3E%3Cg%20fill%3D%22%23fff%22%20opacity%3D%22.4%22%3E%3Cpath%20d%3D%22M112%2046l1.2%202.6%202.8.3-2.1%201.9.6%202.8-2.5-1.5-2.5%201.5.6-2.8-2.1-1.9%202.8-.3z%22/%3E%3Cpath%20d%3D%22M64%2014l1%202%202.2.3-1.6%201.5.4%202.2-2-1.2-2%201.2.4-2.2-1.6-1.5%202.2-.3z%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1a365d,#63171b); } .cdi.cd-july4 .cdn { color: #fed7d7; }
+  .cdi.cd-anniv { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22%23feb2b2%22%20opacity%3D%22.5%22%3E%3Cpath%20d%3D%22M100%2046c-12-8-16-14-16-20a8%208%200%200%201%2016-2%208%208%200%200%201%2016%202c0%206-4%2012-16%2020z%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23feb2b2%22%20opacity%3D%22.3%22%3E%3Cpath%20d%3D%22M72%2022c-5-3-7-6-7-8.5a3.5%203.5%200%200%201%207-1%203.5%203.5%200%200%201%207%201c0%202.5-2%205.5-7%208.5z%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #742a2a,#3b1515); } .cdi.cd-anniv .cdn { color: #fed7d7; }
+  .cdi.cd-event { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2381e6d9%22%20stroke-width%3D%222%22%20opacity%3D%22.45%22%3E%3Crect%20x%3D%2288%22%20y%3D%2216%22%20width%3D%2226%22%20height%3D%2226%22%20rx%3D%223%22/%3E%3Cpath%20d%3D%22M88%2024h26M95%2012v8M107%2012v8%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #234e52,#1a2e35); } .cdi.cd-event .cdn { color: #b2f5ea; }
+  .cdi.cd-grad { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.65%22%3E%3Cpath%20d%3D%22M89%2025v9c0%204.5%2022%204.5%2022%200v-9l-11%205z%22%20fill%3D%22%233182ce%22/%3E%3Cpath%20d%3D%22M100%2013l19%209-19%209-19-9z%22%20fill%3D%22%2390cdf4%22/%3E%3Cpath%20d%3D%22M100%2022l13%204v9%22%20fill%3D%22none%22%20stroke%3D%22%23fefcbf%22%20stroke-width%3D%221.3%22/%3E%3Crect%20x%3D%22111.3%22%20y%3D%2234%22%20width%3D%223.4%22%20height%3D%228%22%20rx%3D%221.2%22%20fill%3D%22%23fefcbf%22/%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2222%22%20r%3D%221.6%22%20fill%3D%22%231a365d%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23fefcbf%22%20opacity%3D%22.5%22%3E%3Cpath%20d%3D%22M70%2012l1%203%203%201-3%201-1%203-1-3-3-1%203-1z%22/%3E%3Cpath%20d%3D%22M78%2044l.8%202.2%202.2.8-2.2.8-.8%202.2-.8-2.2-2.2-.8%202.2-.8z%22/%3E%3Ccircle%20cx%3D%2264%22%20cy%3D%2230%22%20r%3D%221.2%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1a365d,#0f172a); } .cdi.cd-grad .cdn { color: #fefcbf; }
+  .cdi.cd-valentine { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cpath%20transform%3D%22translate%28100%2028%29%20scale%281.35%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fc8181%22%20opacity%3D%22.7%22/%3E%3Cpath%20transform%3D%22translate%2880%2014%29%20scale%280.6%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fbb6ce%22%20opacity%3D%22.55%22/%3E%3Cpath%20transform%3D%22translate%28114%2048%29%20scale%280.5%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fed7e2%22%20opacity%3D%22.5%22/%3E%3Cpath%20transform%3D%22translate%2870%2042%29%20scale%280.45%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fc8181%22%20opacity%3D%22.45%22/%3E%3Cg%20fill%3D%22%23fed7e2%22%20opacity%3D%22.45%22%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2220%22%20r%3D%221.2%22/%3E%3Ccircle%20cx%3D%2288%22%20cy%3D%2250%22%20r%3D%221%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #9b2c2c,#3b0d1e); } .cdi.cd-valentine .cdn { color: #fed7e2; }
+
+  /* Christmas look (body.xc): starry midnight sky, gold accents, Star of Bethlehem + nativity scene */
+  .timerow { display: flex; align-items: flex-start; }
+  #xmasEmblem, #nvEmblem { display: none; pointer-events: none; }
+  #xmasEmblem svg, #nvEmblem svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  body.xc #xmasEmblem { display: block; flex: 1 1 auto; align-self: stretch; min-width: 0; max-width: 30vmin; margin-left: 2vmin; position: relative; }
+  #xmasEmblem svg { position: absolute; top: 0; left: 0; }  /* the drawing fits the clock row; it never sets the row's height */
+  #xmasEmblem .adv-art { position: absolute; top: 0; left: 0; right: 0; bottom: 6.8vmin; }
+  #xmasEmblem .adv-lb { position: absolute; left: 0; right: 0; bottom: 0; text-align: center; font-size: 2.6vmin; line-height: 1.25; letter-spacing: 0.12em; text-transform: uppercase; color: #f2d48a; white-space: nowrap; overflow: hidden; }
+  body.bars-many #xmasEmblem .adv-lb { display: none; }   /* tight on space: wreath only */
+  body.bars-many #xmasEmblem .adv-art { bottom: 0; }  /* as tall as the clock, so it never pushes the page down */
+  body.xc #nvEmblem { display: block; position: absolute; opacity: 0.78; }
+  #nvEmblem g * { fill: #3d5488; }                 /* lighter figures so they show on the black night screen */
+  #nvEmblem g > path:first-child { fill: #26385f; }
+  #nvTime { display: inline-block; }
+  body.xc.nv-wide:not(.bars-on) #nvTime { font-size: 33vmin; }  /* 10:00–12:59: a little smaller so the scene keeps its size */
+  body.xc { background:
+      radial-gradient(1.5px 1.5px at 22% 18%, rgba(255,255,255,0.5), transparent), radial-gradient(1px 1px at 38% 9%, rgba(255,255,255,0.45), transparent),
+      radial-gradient(1.5px 1.5px at 61% 14%, rgba(255,255,255,0.35), transparent), radial-gradient(1px 1px at 8% 40%, rgba(255,255,255,0.35), transparent),
+      radial-gradient(1px 1px at 47% 31%, rgba(255,255,255,0.3), transparent), radial-gradient(1.5px 1.5px at 90% 6%, rgba(255,255,255,0.4), transparent),
+      radial-gradient(circle at 30% 0%, rgba(234,196,96,0.14), transparent 40%), radial-gradient(circle at 85% 95%, rgba(59,130,246,0.14), transparent 45%), #070d1f;
+    background-attachment: fixed; }
+  body.xc.night { background: #000; }
+  body.xc .card { background: rgba(255,255,255,0.04); border-color: rgba(234,196,96,0.13); }
+  body.xc .radar-hint { color: #f2d48a; background: rgba(234,196,96,0.1); border-color: rgba(234,196,96,0.3); }
+  body.xc .day.today { background: rgba(234,196,96,0.11); }
+
+  /* Portrait layout */
+  @media (orientation: portrait) {
+    .wrap {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto 1fr;
+      grid-template-areas: "clock" "now" "week" "tiles";
+    }
+    body.cd-on .wrap { grid-template-rows: auto auto auto auto 1fr; grid-template-areas: "clock" "now" "week" "cd" "tiles"; }
+    #time { font-size: 20vmin; }
+    .tiles { min-height: 30vh; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <section class="clock">
+    <div class="timerow"><div id="time">--:--</div><div id="xmasEmblem"></div></div>
+    <div id="date"></div>
+    <div id="sun"></div>
+    <div id="extras"></div>
+    <div id="alerts"></div>
+  </section>
+
+  <section class="card now" id="nowCard">
+    <div class="radar-hint">Radar &rsaquo;</div>
+    <div>
+      <div class="place" id="place"></div>
+      <div class="now-top">
+        <div id="nowIcon">·</div>
+        <div>
+          <div id="nowTemp">--</div>
+        </div>
+        <div>
+          <div id="nowText">Loading forecast…</div>
+          <div id="nowMeta"></div>
+          <div id="nowRain"></div>
+          <div id="nowTot"></div>
+        </div>
+      </div>
+    </div>
+    <div class="hourly" id="hourly"></div>
+  </section>
+
+  <section class="tiles" id="tiles"></section>
+
+  <section class="card" id="cd"><div class="cd-h">Coming up · days to go</div><div id="cdRow"></div></section>
+
+  <section class="card week" id="week"><div class="muted">Loading 7-day forecast…</div></section>
+</div>
+<div id="updated"></div>
+<div id="severe"></div>
+<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div><div class="bar" id="heatBar"></div></div>
+
+<div id="nightView">
+  <div id="nvEmblem"></div>
+  <div class="nv-main" id="nvMain"><div id="nvTime">--:--</div><div id="nvDate"></div></div>
+  <div>
+    <div class="nv-wx" id="nvWx"></div>
+    <div class="nv-tiles" id="nvTiles"></div>
+    <div class="nv-hint">Tap the clock or weather for the full dashboard</div>
+  </div>
+</div>
+
+<div id="dayDetail"><div class="dd-card" id="ddCard"></div></div>
+<div id="hrDetail"><div class="dd-card hr-card" id="hrCard"></div></div>
+<div id="sevDetail"><div class="dd-card sd-card" id="sdCard"></div></div>
+<div id="cdDetail"><div class="dd-card cda-card" id="cdCard"></div></div>
+
+<div id="radar">
+  <div class="radar-bar">
+    <div class="radar-title">Live Radar — Huntsville (KHTX)<small id="radarTime"></small></div>
+    <a class="rbtn" id="radarMore" target="_top">Interactive map</a>
+    <button class="rbtn close" id="radarClose">&times; Close</button>
+  </div>
+  <div class="radar-img"><img id="radarImg" alt="Radar loop"><div id="radarMsg"></div></div>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const TZ = CONFIG.timeZone;
+  const fmtTime = (d, opts) => d.toLocaleTimeString("en-US", Object.assign({ timeZone: TZ }, opts));
+  $("place").textContent = CONFIG.place;
+  // Wall-clock date/time in CONFIG.timeZone. Plain toLocaleString + a regex, so it also works in older
+  // browsers (the fridge's) that lack formatToParts, hourCycle or Object.fromEntries.
+  function tzParts(d) {
+    const s = (d || new Date()).toLocaleString("en-US", { timeZone: TZ, hour12: false });
+    const m = /(\d+)\D+(\d+)\D+(\d+)\D+(\d+)\D+(\d+)/.exec(s) || [];
+    return { year: +m[3], month: +m[1], day: +m[2], hour: (+m[4]) % 24, minute: +m[5] };
+  }
+  const two = (n) => ("0" + n).slice(-2);
+
+  /* ---------- Drawn icons (no emoji fonts needed, look the same on every device) ---------- */
+  const C = { sun: "#FDB813", ray: "#FDB813", cloud: "#D5DEE8", cloud2: "#9AA9BB", rain: "#60A5FA", bolt: "#FACC15", snow: "#F1F5F9", moon: "#F3E7C4", moonDark: "#2B3646", fog: "#AEB9C7", wind: "#BFD4EA", red: "#F87171" };
+  const svg = (inner) => `<span class="ic"><svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${inner}</svg></span>`;
+  function sunG(cx, cy, r) {
+    let rays = "";
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4, r1 = r * 1.35, r2 = r * 1.75;
+      rays += `<line x1="${cx + r1 * Math.cos(a)}" y1="${cy + r1 * Math.sin(a)}" x2="${cx + r2 * Math.cos(a)}" y2="${cy + r2 * Math.sin(a)}" stroke="${C.ray}" stroke-width="${r * 0.32}" stroke-linecap="round"/>`;
+    }
+    return rays + `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.sun}"/>`;
+  }
+  function cloudG(x, y, s, fill) {
+    // a cloud whose bottom-left corner is at (x, y), width about 44*s
+    return `<g transform="translate(${x} ${y}) scale(${s})" fill="${fill || C.cloud}">
+      <circle cx="14" cy="-12" r="10"/><circle cx="26" cy="-18" r="13"/><circle cx="36" cy="-10" r="9"/>
+      <rect x="4" y="-12" width="40" height="12" rx="6"/></g>`;
+  }
+  // Moon drawn from its actual age, lit side on the right while waxing (as seen from the Northern Hemisphere)
+  const SYNODIC = 29.530588853;
+  function moonAge(when) {
+    const jd = (when ? new Date(when) : new Date()).getTime() / 86400000 + 2440587.5;
+    return (((jd - 2451550.1) % SYNODIC) + SYNODIC) % SYNODIC;
+  }
+  function moonG(cx, cy, r, age) {
+    const f = age / SYNODIC;
+    const rx = Math.abs(Math.cos(2 * Math.PI * f)) * r;
+    let lit;
+    if (f < 0.5) { // waxing: lit on the right
+      const sweep = f < 0.25 ? 0 : 1;
+      lit = `M${cx} ${cy - r} A${r} ${r} 0 0 1 ${cx} ${cy + r} A${rx} ${r} 0 0 ${sweep} ${cx} ${cy - r}Z`;
+    } else { // waning: lit on the left
+      const sweep = f < 0.75 ? 0 : 1;
+      lit = `M${cx} ${cy - r} A${r} ${r} 0 0 0 ${cx} ${cy + r} A${rx} ${r} 0 0 ${sweep} ${cx} ${cy - r}Z`;
+    }
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.moonDark}" stroke="#4A5668" stroke-width="1.2"/><path d="${lit}" fill="${C.moon}"/>`;
+  }
+  const drops = (n, x0, y0, color) => { let d = ""; for (let i = 0; i < n; i++) d += `<line x1="${x0 + i * 10}" y1="${y0}" x2="${x0 + i * 10 - 4}" y2="${y0 + 10}" stroke="${color || C.rain}" stroke-width="3.5" stroke-linecap="round"/>`; return d; };
+  const flakes = (n, x0, y0) => { let d = ""; for (let i = 0; i < n; i++) { const x = x0 + i * 11, y = y0 + (i % 2) * 6; d += `<g stroke="${C.snow}" stroke-width="2.6" stroke-linecap="round"><line x1="${x - 4}" y1="${y}" x2="${x + 4}" y2="${y}"/><line x1="${x - 2}" y1="${y - 3.5}" x2="${x + 2}" y2="${y + 3.5}"/><line x1="${x + 2}" y1="${y - 3.5}" x2="${x - 2}" y2="${y + 3.5}"/></g>`; } return d; };
+  const ICONS = {
+    sun: () => svg(sunG(32, 32, 12)),
+    moon: (age) => svg(moonG(32, 32, 20, age)),
+    partlyDay: () => svg(sunG(24, 24, 9) + cloudG(12, 52, 1.05)),
+    partlyNight: (age) => svg(moonG(24, 22, 13, age) + cloudG(12, 54, 1.05)),
+    cloudy: () => svg(cloudG(16, 30, 0.75, C.cloud2) + cloudG(6, 50, 1.1)),
+    rain: () => svg(cloudG(8, 38, 1.1) + drops(4, 18, 44)),
+    showersDay: () => svg(sunG(20, 18, 7) + cloudG(10, 38, 1.05) + drops(3, 22, 44)),
+    showersNight: (age) => svg(moonG(20, 16, 10, age) + cloudG(10, 38, 1.05) + drops(3, 22, 44)),
+    storm: () => svg(cloudG(8, 36, 1.1, C.cloud2) + `<path d="M34 34 L24 50 H32 L28 62 L42 44 H34 L38 34Z" fill="${C.bolt}"/>` + drops(2, 16, 42)),
+    snow: () => svg(cloudG(8, 38, 1.1) + flakes(3, 20, 48)),
+    sleet: () => svg(cloudG(8, 38, 1.1) + drops(2, 18, 44) + flakes(2, 41, 49)),
+    fog: () => svg(cloudG(12, 30, 0.9) + [36, 44, 52].map((y, i) => `<line x1="${8 + i * 3}" y1="${y}" x2="${56 - i * 3}" y2="${y}" stroke="${C.fog}" stroke-width="3.5" stroke-linecap="round"/>`).join("")),
+    wind: () => svg(`<g fill="none" stroke="${C.wind}" stroke-width="4" stroke-linecap="round"><path d="M8 24 H40 a7 7 0 1 0 -7 -7"/><path d="M8 34 H50 a7 7 0 1 1 -7 7"/><path d="M8 44 H30"/></g>`),
+    tornado: () => svg(`<g stroke="${C.cloud2}" stroke-width="4" stroke-linecap="round">${[[8,56,12],[13,51,21],[18,46,30],[22,40,39],[26,36,48],[29,33,56]].map(([a,b,y]) => `<line x1="${a}" y1="${y}" x2="${b}" y2="${y}"/>`).join("")}</g>`),
+    sunrise: () => svg(`<clipPath id="hz"><rect x="0" y="0" width="64" height="44"/></clipPath><g clip-path="url(#hz)">${sunG(32, 44, 11)}</g><line x1="6" y1="46" x2="58" y2="46" stroke="#E8EDF4" stroke-width="3" stroke-linecap="round"/><path d="M32 52 V62 M27 57 L32 52 L37 57" fill="none" stroke="${C.sun}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -2)"/>`),
+    sunset: () => svg(`<clipPath id="hz2"><rect x="0" y="0" width="64" height="44"/></clipPath><g clip-path="url(#hz2)">${sunG(32, 44, 11)}</g><line x1="6" y1="46" x2="58" y2="46" stroke="#E8EDF4" stroke-width="3" stroke-linecap="round"/><path d="M32 50 V60 M27 55 L32 60 L37 55" fill="none" stroke="#F97316" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`),
+    home: () => svg(`<path d="M8 30 L32 10 L56 30" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 27 V54 H49 V27" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4.5" stroke-linejoin="round"/><rect x="27" y="37" width="10" height="17" rx="1.5" fill="#fff"/>`),
+    camera: () => svg(`<rect x="6" y="18" width="38" height="28" rx="6" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4.5"/><path d="M44 27 L58 19 V45 L44 37Z" fill="#fff"/><circle cx="16" cy="27" r="3.5" fill="#F87171"/>`),
+    thermo: () => svg(`<rect x="24" y="6" width="16" height="38" rx="8" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4.5"/><circle cx="32" cy="48" r="11" fill="#fff"/><rect x="29.5" y="20" width="5" height="26" rx="2.5" fill="#fff"/><g stroke="#fff" stroke-width="3" stroke-linecap="round"><line x1="44" y1="14" x2="50" y2="14"/><line x1="44" y1="22" x2="50" y2="22"/><line x1="44" y1="30" x2="50" y2="30"/></g>`),
+    water: () => svg(`<path d="M32 6 C24 20 14 30 14 42 a18 18 0 0 0 36 0 C50 30 40 20 32 6Z" fill="rgba(255,255,255,.18)" stroke="#fff" stroke-width="4.5" stroke-linejoin="round"/><path d="M23 42 a9 9 0 0 0 9 9" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>`),
+    music: () => svg(`<path d="M24 46 V14 L52 8 V40" fill="none" stroke="#fff" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/><ellipse cx="17" cy="47" rx="8" ry="6.5" fill="#fff"/><ellipse cx="45" cy="41" rx="8" ry="6.5" fill="#fff"/><line x1="24" y1="22" x2="52" y2="16" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>`),
+    drop: () => svg(`<path d="M32 8 C24 22 16 30 16 40 a16 16 0 0 0 32 0 C48 30 40 22 32 8Z" fill="${C.rain}"/>`),
+    alert: () => svg(`<path d="M32 6 L60 56 H4Z" fill="#FBBF24" stroke="#FBBF24" stroke-width="4" stroke-linejoin="round"/><rect x="29" y="22" width="6" height="18" rx="3" fill="#3B2A05"/><circle cx="32" cy="48" r="3.6" fill="#3B2A05"/>`)
+  };
+
+
+  /* ---------- Tiles ---------- */
+  // Open a tile's website in the Chrome app (used for Wyze, whose sign-in refuses Fully's built-in browser)
+  function openInChrome(url) {
+    const f = window.fully;
+    const intent = "intent://" + url.replace(/^https?:\/\//, "") + "#Intent;scheme=https;package=com.android.chrome;end";
+    // Name Chrome directly so Android doesn't ask "Open with…" every time; the intent link is only a fallback
+    try { if (f && typeof f.startApplication === "function") { f.startApplication("com.android.chrome", "android.intent.action.VIEW", url); return true; } } catch (e) {}
+    try { if (f && typeof f.startIntent === "function") { f.startIntent(intent); return true; } } catch (e) {}
+    return false; // not in Fully (fridge, a computer): just follow the link
+  }
+  const tilesEl = $("tiles");
+  CONFIG.tiles.forEach((t) => {
+    const el = document.createElement("a");
+    el.className = "tile";
+    el.href = t.url || "#";
+    el.target = "_top";
+    if (t.chrome) el.addEventListener("click", (e) => { if (openInChrome(t.url)) e.preventDefault(); });
+    if (t.app) {
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (window.fully && typeof window.fully.startApplication === "function") {
+          window.fully.startApplication(t.app);
+        } else {
+          toast("Opening apps needs Fully Kiosk PLUS with Enable JavaScript Interface turned on.");
+        }
+      });
+    }
+    el.style.background = `linear-gradient(135deg, ${t.color} 0%, ${shade(t.color, -35)} 100%)`;
+    el.innerHTML = `<div class="ti">${ICONS[t.icon] ? ICONS[t.icon]() : t.icon}</div><div><div class="tl">${t.label}</div><div class="ts">${t.sub}</div></div><div class="arrow">›</div>`;
+    if (!t.app && !(t.chrome && window.fully)) el.addEventListener("click", () => el.classList.add("loading"));
+    tilesEl.appendChild(el);
+  });
+  if (CONFIG.tiles.length >= 4) tilesEl.classList.add("grid2");
+  // Clear the "Opening…" overlay if the page is restored from history
+  window.addEventListener("pageshow", () => document.querySelectorAll(".tile.loading").forEach(e => e.classList.remove("loading")));
+
+  function toast(msg) {
+    let tEl = document.getElementById("toast");
+    if (!tEl) { tEl = document.createElement("div"); tEl.id = "toast"; document.body.appendChild(tEl); }
+    tEl.textContent = msg; tEl.classList.add("show");
+    clearTimeout(toast._t); toast._t = setTimeout(() => tEl.classList.remove("show"), 5000);
+  }
+
+  function shade(hex, pct) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = (c) => Math.max(0, Math.min(255, Math.round(c + (c * pct) / 100)));
+    const r = f(n >> 16), g = f((n >> 8) & 255), b = f(n & 255);
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+
+  /* ---------- Radar overlay ---------- */
+  const radar = $("radar"), rImg = $("radarImg"), rMsg = $("radarMsg");
+  let radarRefresh = null, radarAutoClose = null;
+  $("radarMore").href = CONFIG.radarInteractive;
+  function loadRadarImg() {
+    rMsg.textContent = "";
+    rImg.style.display = "";
+    rImg.src = CONFIG.radarLoop + "?t=" + Date.now(); // bypass cache for fresh frames
+  }
+  rImg.onload = () => { $("radarTime").textContent = "Updated " + fmtTime(new Date(), { hour: "numeric", minute: "2-digit" }) + " · loop of the last hour"; };
+  rImg.onerror = () => { rImg.style.display = "none"; rMsg.textContent = "Radar is unavailable right now. Try the interactive map."; };
+  let severeActive = false;
+  let weekDays = []; // the 7-day strip's days, for the tap-for-details panel
+  function openRadar() {
+    if (radar.classList.contains("open")) { if (severeActive) clearTimeout(radarAutoClose); return; } // a warning arrived while radar was already open: don't let the 5-min auto-close run
+    radar.classList.add("open");
+    loadRadarImg();
+    radarRefresh = setInterval(loadRadarImg, 2 * 60 * 1000);
+    clearTimeout(radarAutoClose);
+    if (!severeActive) radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); // back to home after 5 min (not during a warning)
+  }
+  function closeRadar() {
+    radar.classList.remove("open");
+    clearInterval(radarRefresh); clearTimeout(radarAutoClose);
+    rImg.removeAttribute("src");
+  }
+  $("nowCard").addEventListener("click", openRadar);
+  // 7-day strip: tapping a day opens its details (see showDay); tapping elsewhere on the strip still opens radar
+  $("week").addEventListener("click", (e) => {
+    const d = e.target.closest(".day");
+    if (d && d.dataset.idx) showDay(+d.dataset.idx); else openRadar();
+  });
+  $("radarClose").addEventListener("click", closeRadar);
+
+  /* ---------- Moon phase (calculated on the tablet) ---------- */
+  const MOON_NAMES = ["New Moon", "Waxing Crescent", "First Quarter", "Waxing Gibbous", "Full Moon", "Waning Gibbous", "Last Quarter", "Waning Crescent"];
+  function moonIndex(when) { return Math.floor((moonAge(when) / SYNODIC) * 8 + 0.5) % 8; }
+
+  /* ---------- Sunrise / sunset (calculated on the tablet, no internet needed) ---------- */
+  function sunTimes(y, m, d, lat, lon) {
+    const rad = Math.PI / 180;
+    const J = Date.UTC(y, m - 1, d, 12) / 86400000 + 2440587.5;
+    const n = Math.round(J - 2451545.0);
+    const Js = n - lon / 360;
+    const M = (357.5291 + 0.98560028 * Js) % 360;
+    const C = 1.9148 * Math.sin(M * rad) + 0.02 * Math.sin(2 * M * rad) + 0.0003 * Math.sin(3 * M * rad);
+    const L = (M + C + 180 + 102.9372) % 360;
+    const Jt = 2451545 + Js + 0.0053 * Math.sin(M * rad) - 0.0069 * Math.sin(2 * L * rad);
+    const dec = Math.asin(Math.sin(L * rad) * Math.sin(23.4397 * rad));
+    const cosW = (Math.sin(-0.833 * rad) - Math.sin(lat * rad) * Math.sin(dec)) / (Math.cos(lat * rad) * Math.cos(dec));
+    if (cosW > 1 || cosW < -1) return null;
+    const w = Math.acos(cosW) / rad / 360;
+    const toDate = (j) => new Date((j - 2440587.5) * 86400000);
+    return { rise: toDate(Jt - w), set: toDate(Jt + w) };
+  }
+  let sunKey = "", sun = null;
+  function renderSun(d) {
+    const parts = tzParts(d);
+    const key = `${parts.year}-${parts.month}-${parts.day}`;
+    if (key !== sunKey) { sunKey = key; sun = sunTimes(+parts.year, +parts.month, +parts.day, CONFIG.lat, CONFIG.lon); }
+    if (!sun) { $("sun").innerHTML = ""; return; }
+    const t = (x) => fmtTime(x, { hour: "numeric", minute: "2-digit" });
+    const now = d.getTime();
+    $("sun").innerHTML =
+      `<div class="si ${now > sun.rise ? "past" : ""}">${ICONS.sunrise()} Sunrise <b>${t(sun.rise)}</b></div>` +
+      `<div class="si ${now > sun.set ? "past" : ""}">${ICONS.sunset()} Sunset <b>${t(sun.set)}</b></div>` +
+      `<div class="si">${ICONS.moon(moonAge(d))} <b>${MOON_NAMES[moonIndex(d)]}</b></div>`;
+  }
+
+  /* ---------- Night view (big dim clock, tonight/tomorrow, tiles) ---------- */
+  const nightOK = CONFIG.nightView === true || (CONFIG.nightView === "tablet" && !!window.fully);
+  const NV_PEEK = 2 * 60 * 1000; // a tap shows the full dashboard for 2 minutes
+  let nightW = null, nightPeekUntil = 0, nightWxHtml = "";
+  (function buildNightTiles() {
+    const box = $("nvTiles");
+    box.style.gridTemplateColumns = `repeat(${CONFIG.tiles.length}, minmax(0, 1fr))`;
+    CONFIG.tiles.forEach((t) => {
+      const el = document.createElement("a");
+      el.className = "nv-tile";
+      el.href = t.url || "#";
+      el.target = "_top";
+      if (t.chrome) el.addEventListener("click", (e) => { if (openInChrome(t.url)) e.preventDefault(); });
+      if (t.app) el.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (window.fully && typeof window.fully.startApplication === "function") window.fully.startApplication(t.app);
+      });
+      el.innerHTML = `${ICONS[t.icon] ? ICONS[t.icon]() : ""}<span>${t.label}</span>`;
+      box.appendChild(el);
+    });
+  })();
+  $("nightView").addEventListener("click", (e) => {
+    if (e.target.closest && e.target.closest(".nv-tile")) return;
+    nightPeekUntil = Date.now() + NV_PEEK;
+    document.body.classList.remove("nv-on");
+  });
+  // While peeking at the dashboard, every tap keeps it up a little longer
+  document.addEventListener("click", () => { if (nightPeekUntil > Date.now()) nightPeekUntil = Date.now() + NV_PEEK; }, true);
+  function setNightView(isNight) {
+    document.body.classList.toggle("nv-on", nightOK && isNight && Date.now() >= nightPeekUntil);
+  }
+  function renderNightWx() {
+    if (!nightOK || !nightW) return;
+    const now = Date.now();
+    const h = tzParts(new Date()).hour;
+    const afterMidnight = h < 12;
+    const hours = nightW.hourly.filter(p => new Date(p.endTime).getTime() > now);
+    const daily = nightW.daily.filter(p => new Date(p.endTime).getTime() > now);
+    const n = daily.find(p => !p.isDaytime);
+    const di = daily.findIndex(p => p.isDaytime), dd = daily[di];
+    const nn = dd ? daily.slice(di + 1).find(p => !p.isDaytime) : null;
+    let left = "", right = "";
+    if (afterMidnight && hours[0]) {
+      const c = hours[0];
+      left = `<div class="nv-label">Now</div><div class="nv-temp">${icon(c.shortForecast, c.isDaytime, c.startTime)}${c.temperature}°</div><div class="nv-text">${c.shortForecast}${n ? " · low " + n.temperature + "°" : ""}</div>`;
+    } else if (n) {
+      left = `<div class="nv-label">Tonight</div><div class="nv-temp">${icon(n.shortForecast, false, n.startTime)}Low ${n.temperature}°</div><div class="nv-text">${n.shortForecast}</div>`;
+    }
+    if (dd) {
+      const v = dd.probabilityOfPrecipitation && dd.probabilityOfPrecipitation.value;
+      const ymd = tzParts(new Date(dd.startTime));
+      const st = sunTimes(ymd.year, ymd.month, ymd.day, CONFIG.lat, CONFIG.lon);
+      const extra = (v ? ` · ${v}% chance of rain` : "") + (st ? ` · sunrise ${fmtTime(st.rise, { hour: "numeric", minute: "2-digit" })}` : "");
+      right = `<div class="nv-label">${afterMidnight ? "Today" : "Tomorrow"}</div><div class="nv-temp">${icon(dd.shortForecast, true, dd.startTime)}${dd.temperature}°${nn ? ` <span>/ ${nn.temperature}°</span>` : ""}</div><div class="nv-text">${dd.shortForecast}${extra}</div>`;
+    }
+    const html = `<div>${left}</div><div>${right}</div>`;
+    if (html !== nightWxHtml) { nightWxHtml = html; $("nvWx").innerHTML = html; }
+  }
+
+  /* ---------- Christmas look: day after Thanksgiving through Dec 26 ---------- */
+  function star5(cx, cy, R, r, fill) { let d = ""; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r : R; d += (i ? "L" : "M") + (cx + rr * Math.cos(a)).toFixed(1) + " " + (cy + rr * Math.sin(a)).toFixed(1); } return `<path d="${d}Z" fill="${fill}"/>`; }
+  const NATIVITY = (function (star) { return `<svg viewBox="0 0 140 100">
+      <defs><radialGradient id="xcGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f2d48a" stop-opacity="0.55"/><stop offset="0.6" stop-color="#f2d48a" stop-opacity="0.18"/><stop offset="1" stop-color="#f2d48a" stop-opacity="0"/></radialGradient>
+        <radialGradient id="xcStarGlow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff3c4" stop-opacity="0.45"/><stop offset="1" stop-color="#fff3c4" stop-opacity="0"/></radialGradient></defs>
+      <circle cx="70" cy="16" r="16" fill="url(#xcStarGlow)"/>
+      <g stroke="#f2d48a" stroke-linecap="round"><line x1="70" y1="1" x2="70" y2="40" stroke-width="1.8"/><line x1="54" y1="16" x2="86" y2="16" stroke-width="1.8"/><line x1="61" y1="7" x2="79" y2="25" stroke-width="1"/><line x1="79" y1="7" x2="61" y2="25" stroke-width="1"/></g>
+      ${star(70, 16, 7, 3, "#fff3c4")}
+      <ellipse cx="70" cy="77" rx="56" ry="24" fill="url(#xcGlow)"/>
+      <g fill="#0b1430">
+        <path d="M2 99 Q8 91 30 90 Q50 87 70 91 Q92 94 112 88 Q130 86 138 99Z" fill="#0b1430"/>
+        <path d="M30 61 L70 43 L110 61 L107 63.5 L70 47.5 L33 63.5Z"/>
+        <rect x="37" y="59" width="2.6" height="32"/><rect x="100.4" y="59" width="2.6" height="32"/>
+        <g transform="rotate(4 53.5 90.6)">
+          <path d="M54 61 C51.6 61 50.4 62.8 50.5 64.8 C50.6 66.6 50.2 68.4 49.6 70 C51 69.2 52.2 68.6 53.4 68.4 C55.4 68.2 56.8 67 57 65.2 C57.2 62.8 55.8 61 54 61Z"/>
+          <path d="M50.2 69 C51.6 67.9 55.2 67.8 56.6 68.8 C57.6 69.8 57.8 72.4 57.8 75.4 C58 80.6 58.6 85.8 59.6 90.6 H47.4 C48.2 85.6 48.8 80.4 49.1 75.4 C49.3 72.2 49.4 70 50.2 69Z"/>
+          <path d="M55.6 69.6 C57.4 71.4 59 72.8 60.6 73.6 C61.3 74 61.2 75.1 60.4 75.2 C58.4 75.3 56.2 74.4 54.8 73Z"/>
+        </g>
+        <path d="M62 81 H78 L76 85 H64Z"/><path d="M64 85 L62 90 H63.6 L65.4 85.5Z"/><path d="M76 85 L78 90 H76.4 L74.6 85.5Z"/>
+        <g transform="rotate(-3 89 90.6)">
+          <path d="M88.7 57 C86.5 57 85 58.7 85 60.8 C85 62.7 86 64.1 87.4 64.6 L89.6 64.9 C91.2 64.6 92.3 63.3 92.4 61.2 C92.5 58.8 90.9 57 88.7 57Z"/>
+          <path d="M85.4 61.2 C85.2 63.2 86.2 64.8 87.8 65 C88.2 64 87.8 62.6 87 61.8Z"/>
+          <path d="M85.6 64.8 C87 63.8 90.8 63.8 92.4 65 C93.4 66.2 93.6 68.8 93.6 71.8 C93.8 78 94.4 84.6 95.4 90.6 H82.6 C83.4 84.6 84 78 84.2 71.8 C84.4 68.8 84.6 66 85.6 64.8Z"/>
+          <path d="M86.6 66.4 C85 68.4 83.2 70.2 81.6 71.2 C80.9 71.7 81.1 72.8 81.9 72.8 C83.9 72.8 86 71.4 87.6 69.6Z"/>
+        </g>
+        <path d="M16.8 87.2 a2.2 2.2 0 0 1 2.2 -2.6 a2.6 2.6 0 0 1 4.4 -1.4 a2.6 2.6 0 0 1 4.4 1.2 a2.2 2.2 0 0 1 1.4 3.8 a2.2 2.2 0 0 1 -2.6 2.2 a2.4 2.4 0 0 1 -4 0.4 a2.4 2.4 0 0 1 -3.8 -0.2 a2 2 0 0 1 -2 -3.4Z"/>
+        <ellipse cx="15.6" cy="86.6" rx="2.1" ry="1.55" transform="rotate(-18 15.6 86.6)"/><ellipse cx="16.6" cy="85" rx="1.1" ry="0.55" transform="rotate(-35 16.6 85)"/>
+        <rect x="18.6" y="89.6" width="0.9" height="2.6" rx="0.4"/><rect x="21.2" y="89.8" width="0.9" height="2.4" rx="0.4"/><rect x="24.2" y="89.8" width="0.9" height="2.4" rx="0.4"/><rect x="26.6" y="89.4" width="0.9" height="2.6" rx="0.4"/>
+      </g>
+      <ellipse cx="70" cy="79.6" rx="4.2" ry="2" fill="#fff3c4" opacity="0.9"/><circle cx="70" cy="79.4" r="5.6" fill="none" stroke="#f2d48a" stroke-width="0.6" opacity="0.6"/>
+    </svg>`; })(star5);
+  // Advent wreath: three purple candles and one rose (3rd week, Joy) on a ring of greenery, white Christ candle in the middle
+  function adventWreath(lit, christ) {
+    const cx = 60, cy = 56, rx = 46, ry = 9;
+    const leaf = (a, fill) => { const x = cx + rx * Math.cos(a), y = cy + ry * Math.sin(a); return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="7.5" ry="3.6" transform="rotate(${(a * 180 / Math.PI + 90 + Math.sin(a * 3) * 25).toFixed(0)} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${fill}"/>`; };
+    let back = "", front = "";
+    for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2, f = i % 2 ? "#2f7d4f" : "#25643f"; if (Math.sin(a) < 0) back += leaf(a, f); else front += leaf(a, f); }
+    const berries = [0.3, 1.2, 1.9, 2.6, 3.5].map(a => `<circle cx="${(cx + rx * Math.cos(a)).toFixed(1)}" cy="${(cy + ry * Math.sin(a) - 1).toFixed(1)}" r="2.1" fill="#e53e3e"/>`).join("");
+    const flame = (x, top) => `<circle cx="${x}" cy="${top - 5}" r="8" fill="url(#advGlow)"/><path d="M${x} ${top - 10} C${x + 3.4} ${top - 5} ${x + 3} ${top - 1} ${x} ${top - 0.5} C${x - 3} ${top - 1} ${x - 3.4} ${top - 5} ${x} ${top - 10}Z" fill="#fde68a"/><path d="M${x} ${top - 6.5} C${x + 1.5} ${top - 4} ${x + 1.3} ${top - 1.6} ${x} ${top - 1.2} C${x - 1.3} ${top - 1.6} ${x - 1.5} ${top - 4} ${x} ${top - 6.5}Z" fill="#f59e0b"/>`;
+    const candle = (x, base, h, color, on) => { const top = base - h; return `<rect x="${x - 3.6}" y="${top}" width="7.2" height="${h}" rx="1.2" fill="${color}"/><rect x="${x - 3.6}" y="${top}" width="2.2" height="${h}" rx="1" fill="rgba(255,255,255,0.18)"/><line x1="${x}" y1="${top}" x2="${x}" y2="${top - 2.2}" stroke="#2d2d2d" stroke-width="0.9"/>${on ? flame(x, top - 1) : ""}`; };
+    const C = [[200, "#6b46c1"], [250, "#6b46c1"], [340, "#d6619c"], [290, "#6b46c1"]]; // lit in this order
+    let cs = "";
+    C.forEach((k, i) => { const a = k[0] * Math.PI / 180; cs += candle(+(cx + rx * Math.cos(a)).toFixed(1), +(cy + ry * Math.sin(a)).toFixed(1), 24, k[1], i < lit); });
+    cs += candle(cx, cy + 1, 32, "#f5f5f4", christ);
+    return `<svg viewBox="0 -2 120 72"><defs><radialGradient id="advGlow"><stop offset="0" stop-color="#fde68a" stop-opacity="0.55"/><stop offset="1" stop-color="#fde68a" stop-opacity="0"/></radialGradient></defs>${back}${cs}${front}${berries}</svg>`;
+  }
+  // Which candles are lit today: one more each Advent Sunday (the 4th Sunday before Christmas is the first); all five on Dec 25–26
+  function adventState(tp) {
+    const today = Date.UTC(tp.year, tp.month - 1, tp.day), xmas = Date.UTC(tp.year, 11, 25), dow = new Date(xmas).getUTCDay();
+    const adv4 = xmas - (dow === 0 ? 7 : dow) * 864e5, adv1 = adv4 - 21 * 864e5;
+    if (today >= xmas) return { lit: 4, christ: true, label: "Merry<br>Christmas" };
+    const lit = today < adv1 ? 0 : Math.min(4, Math.floor((today - adv1) / (7 * 864e5)) + 1);
+    return { lit: lit, christ: false, label: lit ? `Week ${lit}<br>${["Hope", "Peace", "Joy", "Love"][lit - 1]}` : "Advent begins<br>Sunday" };
+  }
+  let adventKey = "";
+  function renderAdvent(tp) {
+    const st = adventState(tp), key = st.lit + "|" + st.christ;
+    if (key === adventKey) return;
+    adventKey = key;
+    $("xmasEmblem").innerHTML = `<div class="adv-art">${adventWreath(st.lit, st.christ)}</div><div class="adv-lb">${st.label}</div>`;
+  }
+  // Shrink the label a little if the clock is wide (e.g. 12:58) and the words wouldn't fit under the wreath
+  function fitAdventLabel() {
+    const l = document.querySelector("#xmasEmblem .adv-lb");
+    if (!l || !l.clientWidth) return;
+    let fs = 2.6; l.style.fontSize = "";
+    while (l.scrollWidth > l.clientWidth + 1 && fs > 1.5) { fs -= 0.1; l.style.fontSize = fs.toFixed(1) + "vmin"; }
+  }
+  $("nvEmblem").innerHTML = NATIVITY.replace(/xcGlow/g, "xcGlowN").replace(/xcStarGlow/g, "xcStarGlowN"); // unique gradient ids
+  const themeParam = (/[?&]theme=(\w+)/.exec(location.search) || [])[1];
+  function christmasOn(tp) {
+    if (themeParam === "xmas") return true;
+    if (themeParam === "off" || !CONFIG.christmas) return false;
+    const today = Date.UTC(tp.year, tp.month - 1, tp.day);
+    const start = nthWeekday(tp.year, 10, 4, 4) + 864e5;            // day after Thanksgiving
+    return today >= start && today <= Date.UTC(tp.year, 11, 26);
+  }
+  // Night view: make the scene as large as the open space allows without touching the clock, AM/PM or date
+  function placeNightScene() {
+    const n = $("nvEmblem"), tEl = $("nvTime");
+    if (!document.body.classList.contains("xc") || !document.body.classList.contains("nv-on")) return;
+    document.body.classList.toggle("nv-wide", /^1\d:/.test(tEl.textContent));
+    const nv = $("nightView"), vmin = Math.min(innerWidth, innerHeight) / 100, pad = 1.5 * vmin, AR = 1.4;
+    const nb = nv.getBoundingClientRect(), t = tEl.getBoundingClientRect(), ap = tEl.querySelector(".ampm"), apR = ap ? ap.getBoundingClientRect() : t;
+    const dr = document.createRange(); dr.selectNodeContents($("nvDate")); const d = dr.getBoundingClientRect(), wx = $("nvWx").getBoundingClientRect();
+    if (!nb.width || !wx.top) return;
+    const obs = [{ l: t.left, t: t.top, r: apR.left, b: t.bottom }, { l: apR.left, t: apR.top, r: apR.right, b: apR.bottom }, { l: d.left, t: d.top, r: d.right, b: d.bottom }]
+      .map(o => ({ l: o.l - pad, t: o.t - pad, r: o.r + pad, b: o.b + pad }));
+    const parts = [[54, 0, 86, 32], [68, 0, 72, 41], [30, 43, 110, 92], [12, 82, 30, 93], [2, 86, 138, 100]]; // painted areas of the 140 x 100 picture
+    const R = nb.right - 3.5 * vmin, B = wx.top - 1.2 * vmin, maxW = R - nb.left - 5 * vmin, topLimit = $("nvMain").getBoundingClientRect().top;
+    let W = 0;
+    for (let w = maxW; w > 60; w -= 4) {
+      const H = w / AR, L = R - w, T = B - H;
+      if (T < topLimit) continue;  // stay below the top banners
+      const hit = parts.some(p => { const pl = L + p[0] / 140 * w, pt = T + p[1] / 100 * H, pr = L + p[2] / 140 * w, pb = T + p[3] / 100 * H;
+        return obs.some(o => pl < o.r && pr > o.l && pt < o.b && pb > o.t); });
+      if (!hit) { W = w; break; }
+    }
+    if (!W) { n.style.visibility = "hidden"; return; }
+    n.style.visibility = ""; n.style.width = W + "px"; n.style.height = W / AR + "px";
+    n.style.left = (R - W - nb.left) + "px"; n.style.top = (B - W / AR - nb.top) + "px";
+  }
+  window.addEventListener("resize", () => { try { placeNightScene(); } catch (e) {} });
+
+  /* ---------- Clock + night mode ---------- */
+  function tick() {
+    const d = new Date();
+    const tp = tzParts(d), h = tp.hour;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 || 12;
+    const m = two(tp.minute);
+    $("time").innerHTML = `${h12}:${m}<span class="ampm">${ampm}</span>`;
+    $("date").textContent = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
+    if (nightOK) { $("nvTime").innerHTML = $("time").innerHTML; $("nvDate").textContent = $("date").textContent; }
+    try { renderSun(d); } catch (e) { console.error(e); }
+    const night = CONFIG.nightStart > CONFIG.nightEnd
+      ? (h >= CONFIG.nightStart || h < CONFIG.nightEnd)
+      : (h >= CONFIG.nightStart && h < CONFIG.nightEnd);
+    document.body.classList.toggle("night", night);
+    try { setNightView(night); renderNightWx(); applyBrightness(d); } catch (e) { console.error(e); }
+    try { const xc = christmasOn(tp); document.body.classList.toggle("xc", xc); if (xc) { renderAdvent(tp); fitAdventLabel(); } placeNightScene(); } catch (e) { console.error(e); }
+  }
+
+  /* ---------- Screen brightness (Fully only) ---------- */
+  let brightPhase = "";
+  function applyBrightness(d) {
+    const f = window.fully, B = CONFIG.brightness;
+    if (!f || !B || typeof f.setScreenBrightness !== "function") return;
+    document.body.classList.add("hwdim");
+    let phase = "day";
+    if (document.body.classList.contains("night")) phase = "night";
+    else if (sun && (d < sun.rise || d > sun.set)) phase = "evening";
+    if (severeActive) phase = "day"; // warnings: full brightness
+    if (phase === brightPhase) return; // only change at sunrise, sunset and night hours
+    brightPhase = phase;
+    try { f.setScreenBrightness(B[phase]); } catch (e) {}
+  }
+  tick();
+  // Tick on exact 10-second marks (:00, :10 …) so the minute changes right on time, not up to 10 s late
+  (function loop() { setTimeout(() => { try { tick(); } catch (e) { console.error(e); } loop(); }, 10000 - (Date.now() % 10000) + 30); })();
+
+  // Gentle pixel shift every 10 minutes to reduce screen burn-in
+  setInterval(() => {
+    const x = Math.round(Math.random() * 8 - 4), y = Math.round(Math.random() * 8 - 4);
+    $("wrap").style.transform = `translate(${x}px, ${y}px)`;
+    $("nightView").style.transform = `translate(${x}px, ${y}px)`;
+  }, 10 * 60 * 1000);
+
+  /* ---------- Weather (National Weather Service, free, no key) ---------- */
+  function icon(text, isDay, when) {
+    const s = (text || "").toLowerCase();
+    const age = moonAge(when);
+    if (/tornado/.test(s)) return ICONS.tornado();
+    if (/thunder|t-storm|storm/.test(s)) return ICONS.storm();
+    if (/snow|flurr|blizzard/.test(s)) return ICONS.snow();
+    if (/sleet|ice|freezing/.test(s)) return ICONS.sleet();
+    if (/rain|shower|drizzle/.test(s)) return /chance|slight|isolated|scattered/.test(s) ? (isDay ? ICONS.showersDay() : ICONS.showersNight(age)) : ICONS.rain();
+    if (/fog|haze|smoke|mist/.test(s)) return ICONS.fog();
+    if (/wind|breez|blustery/.test(s)) return ICONS.wind();
+    if (/mostly cloudy|overcast|cloudy/.test(s) && !/partly/.test(s)) return ICONS.cloudy();
+    if (/partly|mostly sunny|mostly clear/.test(s)) return isDay ? ICONS.partlyDay() : ICONS.partlyNight(age);
+    if (/sunny|clear|fair/.test(s)) return isDay ? ICONS.sun() : ICONS.moon(age);
+    return isDay ? ICONS.partlyDay() : ICONS.moon(age);
+  }
+  const pop = (p) => (p && p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) ? `${ICONS.drop()}${p.probabilityOfPrecipitation.value}%` : "";
+
+  // Every request gives up after 20 seconds, so one stuck request can never stop the alert checks.
+  // (Promise.race works on the fridge's older browser; AbortController is used only where it exists.)
+  function getJSON(url, ms) {
+    ms = ms || 20000;
+    const ctl = typeof AbortController === "function" ? new AbortController() : null;
+    let timer = null;
+    const timeout = new Promise((_, reject) => { timer = setTimeout(() => { if (ctl) { try { ctl.abort(); } catch (e) {} } reject(new Error(url + " → timed out")); }, ms); });
+    const req = fetch(url, ctl ? { headers: { "Accept": "application/geo+json" }, signal: ctl.signal } : { headers: { "Accept": "application/geo+json" } })
+      .then((r) => { if (!r.ok) { const err = new Error(url + " → " + r.status); err.status = r.status; throw err; } return r.json(); });
+    return Promise.race([req, timeout]).then((v) => { clearTimeout(timer); return v; }, (e) => { clearTimeout(timer); throw e; });
+  }
+
+  // Cache: show the last forecast instantly on load, then refresh in the background
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  };
+  // Small chips under sunrise/sunset. Storm risk and air quality chips were removed Nov 13 (the top banners cover alerts); the slot is kept for future chips.
+  const extras = {};
+  try { localStorage.removeItem("wx_risk"); localStorage.removeItem("wx_aq"); } catch (e) {}
+  function renderExtras() {
+    $("extras").innerHTML = Object.keys(extras).map(k => extras[k]).join("");
+    document.body.classList.toggle("busy", $("extras").children.length >= 3);
+  }
+
+  // Freeze banner across the top for the next night, from the forecast already loaded
+  const SNOWFLAKE = `<span class="ic"><svg viewBox="0 0 64 64"><g stroke="currentColor" stroke-width="5" stroke-linecap="round" fill="none"><path d="M32 6V58M9.5 19L54.5 45M9.5 45L54.5 19"/><path d="M24 10L32 18L40 10M24 54L32 46L40 54"/></g></svg></span>`;
+  // Combines the forecast low with any NWS frost/freeze alert; the most serious one wins
+  const COLD = { frost: 1, freeze: 2, hard: 3, pipes: 3 };
+  const COLD_TIP = { frost: "cover tender plants", freeze: "cover plants, bring potted plants in", hard: "drip faucets, cover outdoor spigots", pipes: "drip faucets, open cabinets under sinks" };
+  // Is today inside one of the freeze "seasons" (spring / fall)?
+  function inFreezeSeason() {
+    const F = CONFIG.freeze || {};
+    if (!F.seasons) return true;
+    const p = tzParts(new Date()), md = two(p.month) + "-" + two(p.day);
+    return F.seasons.some(r => r[0] <= r[1] ? (md >= r[0] && md <= r[1]) : (md >= r[0] || md <= r[1]));
+  }
+  const coldOf = (ev) => /hard freeze/i.test(ev) ? "hard" : /freeze (watch|warning)/i.test(ev) ? "freeze" : /frost advisory/i.test(ev) ? "frost" : "";
+  let coldNight = null, coldAlert = null;
+  function showFreeze(periods) {
+    coldNight = (periods || []).find(p => !p.isDaytime) || null;
+    renderCold();
+  }
+  function setColdAlerts(feats) {
+    coldAlert = feats.filter(a => coldOf(a.event)).sort((a, b) => COLD[coldOf(b.event)] - COLD[coldOf(a.event)])[0] || null;
+    renderCold();
+  }
+  function renderCold() {
+    const bar = $("freezeBar"), F = CONFIG.freeze || {}, n = coldNight;
+    let fc = "";
+    if (n && inFreezeSeason()) fc = n.temperature <= F.hard ? "hard" : n.temperature <= F.light ? "freeze" : (F.frost && /frost/i.test(n.shortForecast || "")) ? "frost" : "";
+    if (!fc && n && F.pipes != null && n.temperature <= F.pipes) fc = "pipes"; // deep cold, any season
+    const al = coldAlert ? coldOf(coldAlert.event) : "";
+    const level = (COLD[al] || 0) >= (COLD[fc] || 0) ? al : fc;
+    if (!level) { setBar(bar, ""); return; }
+    let head;
+    if (level === al) {
+      const until = coldAlert.ends || coldAlert.expires;
+      head = coldAlert.event.toUpperCase() + (until ? " UNTIL " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", timeZone: TZ }).toUpperCase() : "");
+    } else {
+      head = (level === "pipes" ? "VERY COLD " : level === "hard" ? "HARD FREEZE " : level === "frost" ? "FROST " : "FREEZE ") + (/^(Tonight|Overnight)$/i.test(n.name) ? "TONIGHT" : n.name.toUpperCase());
+    }
+    const low = n && n.temperature <= 40 ? ` · LOW ${n.temperature}°` : "";
+    bar.className = "bar " + level;
+    setBar(bar, `${SNOWFLAKE}${head}${low} · ${COLD_TIP[level]}`);
+  }
+
+  // Heat banner (summer twin of the freeze banner): highest "feels like" (heat index) in the next daytime hours,
+  // worked out from the hourly temperature + humidity. NWS heat advisories / warnings also show it whenever issued.
+  const SUN_HOT = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"><circle cx="32" cy="32" r="11"/><path d="M32 5v8M32 51v8M5 32h8M51 32h8M13 13l6 6M45 45l6 6M13 51l6-6M45 19l6-6"/></g></svg></span>`;
+  function heatIndex(T, RH) { // NWS heat index formula (Rothfusz, with NWS adjustments), °F
+    const simple = 0.5 * (T + 61 + (T - 68) * 1.2 + RH * 0.094);
+    if ((simple + T) / 2 < 80) return simple;
+    let HI = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH - 0.00683783 * T * T - 0.05481717 * RH * RH + 0.00122874 * T * T * RH + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+    if (RH < 13 && T >= 80 && T <= 112) HI -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
+    else if (RH > 85 && T >= 80 && T <= 87) HI += ((RH - 85) / 10) * ((87 - T) / 5);
+    return HI;
+  }
+  const heatOf = (ev) => /(extreme|excessive) heat warning/i.test(ev) ? 3 : /(extreme|excessive) heat watch/i.test(ev) ? 2 : /heat advisory/i.test(ev) ? 1 : 0;
+  let heatHours = [], heatAlert = null;
+  function setHeatAlerts(feats) {
+    heatAlert = feats.filter(a => heatOf(a.event)).sort((a, b) => heatOf(b.event) - heatOf(a.event))[0] || null;
+    renderHeat();
+  }
+  function heatPeak() {
+    // the next daytime stretch (today if it's daytime now, otherwise tomorrow)
+    const start = heatHours.findIndex(p => p.isDaytime);
+    if (start < 0) return null;
+    let best = null;
+    for (let i = start; i < heatHours.length && heatHours[i].isDaytime; i++) {
+      const p = heatHours[i], rh = p.relativeHumidity && p.relativeHumidity.value;
+      if (p.temperature == null || rh == null) continue;
+      const hi = heatIndex(p.temperature, rh);
+      if (!best || hi > best.hi) best = { hi: hi, p: p };
+    }
+    return best;
+  }
+  function renderHeat() {
+    const H = CONFIG.heat, bar = $("heatBar");
+    if (!H) { setBar(bar, ""); return; }
+    const pk = heatPeak();
+    const feels = pk ? Math.round(pk.hi) : null;
+    let when = "";
+    if (pk) {
+      const a = tzParts(new Date(pk.p.startTime)), b = tzParts(new Date());
+      when = (a.day === b.day ? "TODAY" : "TOMORROW") + " AROUND " + fmtTime(new Date(pk.p.startTime), { hour: "numeric" }).toUpperCase();
+    }
+    const fcLevel = feels == null ? 0 : feels >= H.extreme ? 2 : feels >= H.hot ? 1 : 0;
+    const alLevel = heatAlert ? heatOf(heatAlert.event) : 0;
+    if (!fcLevel && !alLevel) { setBar(bar, ""); return; }
+    const extreme = fcLevel === 2 || alLevel === 3;
+    const tip = extreme ? "stay inside this afternoon, check on neighbors" : "drink water, limit time outside";
+    let head;
+    if (alLevel) {
+      const until = heatAlert.ends || heatAlert.expires;
+      head = heatAlert.event.toUpperCase() + (until ? " UNTIL " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", timeZone: TZ }).toUpperCase() : "") + (feels != null && feels >= 90 ? ` · FEELS LIKE ${feels}° ${when}` : "");
+    } else {
+      head = (extreme ? "EXTREME HEAT" : "HEAT") + ` · FEELS LIKE ${feels}° ${when}`;
+    }
+    bar.className = "bar" + (extreme ? " extreme" : "");
+    setBar(bar, `${SUN_HOT}${head} · ${tip}`);
+  }
+
+  // Show/hide one top banner and push the page down by however tall the stack is
+  function setBar(el, html) {
+    if (el.innerHTML !== html) el.innerHTML = html;
+    el.style.display = html ? "block" : "none";
+    layoutBars();
+  }
+  function layoutBars() {
+    const h = $("topBars").offsetHeight, on = h > 0 && !document.body.classList.contains("severe-on");
+    document.body.classList.toggle("bars-on", on);
+    document.body.classList.toggle("bars-many", on && [...$("topBars").children].filter(e => e.style.display === "block").length >= 2);
+    $("wrap").style.paddingTop = on ? `calc(${h}px + 2.2vmin)` : "";
+    $("nightView").style.paddingTop = on ? `calc(${h}px + 3vmin)` : "";
+  }
+  window.addEventListener("resize", layoutBars);
+
+  // "Lost connection" banner: weather/alerts haven't updated for a while, so storm alerts can't get through
+  // Storm alerts and the forecast are tracked separately, so a stalled alert check can't hide behind a working forecast.
+  const STALE_MIN = 30;
+  let lastWxOk = Date.now(), lastAlertOk = Date.now();
+  let lastOk = Date.now(); // most recent success of either (used by the 6-hour reload)
+  const markWxOk = () => { lastWxOk = lastOk = Date.now(); checkNet(); };
+  const markAlertOk = () => { lastAlertOk = lastOk = Date.now(); checkNet(); };
+  const WIFI = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M8 26a34 34 0 0 1 48 0M16 35a22 22 0 0 1 32 0M24 44a10 10 0 0 1 16 0"/><path d="M10 10L54 54"/></g></svg></span>`;
+  function checkNet() {
+    const lim = STALE_MIN * 60 * 1000, now = Date.now();
+    const aStale = now - lastAlertOk > lim, wStale = now - lastWxOk > lim;
+    const t = (x) => fmtTime(new Date(x), { hour: "numeric", minute: "2-digit" });
+    let html = "";
+    if (aStale && wStale) html = `${WIFI}NO WEATHER UPDATES SINCE ${t(Math.max(lastAlertOk, lastWxOk))} · check Wi-Fi — storm alerts can't get through`;
+    else if (aStale) html = `${WIFI}STORM ALERTS NOT UPDATING SINCE ${t(lastAlertOk)} · weather service alerts aren't getting through`;
+    else if (wStale) html = `${WIFI}FORECAST NOT UPDATING SINCE ${t(lastWxOk)} · storm alerts are still working`;
+    setBar($("netBar"), html);
+  }
+
+  // Unplugged banner (Fully knows the battery; falls back to the browser's battery info)
+  const PLUG = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M24 6V18M40 6V18M16 18H48V30a16 16 0 0 1-32 0Z"/><path d="M32 46V58"/></g></svg></span>`;
+  let battApi = null;
+  if (navigator.getBattery) navigator.getBattery().then(b => { battApi = b; checkPower(); }).catch(() => {});
+  function checkPower() {
+    let plugged = null, level = null;
+    const f = window.fully;
+    try {
+      if (f && typeof f.isPlugged === "function") plugged = !!f.isPlugged();
+      if (f && typeof f.getBatteryLevel === "function") level = Math.round(+f.getBatteryLevel());
+    } catch (e) {}
+    if (plugged === null && battApi) { plugged = battApi.charging; level = Math.round(battApi.level * 100); }
+    const show = plugged === false;
+    const low = show && level !== null && level <= 20;
+    $("powerBar").classList.toggle("low", low);
+    setBar($("powerBar"), show ? `${PLUG}NOT CHARGING${level !== null ? " · " + level + "%" : ""} · check the tablet's power cord` : "");
+  }
+
+  // Trash / recycling banner: the evening before and the morning of pickup
+  const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const CAN = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 16H54M24 16V9H40V16"/><path d="M16 16L19 56H45L48 16"/><path d="M27 26V46M37 26V46"/></g></svg></span>`;
+  function trashText() {
+    const list = CONFIG.pickups || [], R = CONFIG.pickupRemind || { eveningFrom: 16, morningUntil: 10 };
+    if (!list.length) return "";
+    const p = tzParts(new Date());
+    const today = Date.UTC(p.year, p.month - 1, p.day), hr = p.hour;
+    let target, when;
+    if (hr >= R.eveningFrom) { target = today + 864e5; when = "tomorrow"; }
+    else if (hr < R.morningUntil) { target = today; when = "today"; }
+    else return "";
+    const due = list.filter(x => isPickup(x, target));
+    if (!due.length) return "";
+    if (store.get("trash_done") === target) return ""; // tapped "done" for this pickup
+    trashTarget = target;
+    return `${CAN}${due.map(x => x.label.toUpperCase()).join(" & ")} PICKUP ${when.toUpperCase()} · ${when === "tomorrow" ? "roll it to the curb tonight" : "roll it to the curb this morning"} · <u>tap when it's out</u>`;
+  }
+  let trashTarget = 0;
+  $("trashBar").addEventListener("click", () => {
+    if (!trashTarget) return;
+    store.set("trash_done", trashTarget);
+    updateTrash();
+    toast("Got it — reminder hidden until the next pickup.");
+  });
+  // Federal holidays for a year, as UTC-midnight timestamps (weekend dates moved to the observed Fri/Mon)
+  const holidayCache = {};
+  function holidaysFor(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const nthDow = (m, dow, n) => { const first = new Date(Date.UTC(y, m, 1)).getUTCDay(); return Date.UTC(y, m, 1 + ((dow - first + 7) % 7) + (n - 1) * 7); };
+    const lastDow = (m, dow) => { const last = new Date(Date.UTC(y, m + 1, 0)); return last.getTime() - ((last.getUTCDay() - dow + 7) % 7) * 864e5; };
+    const fixed = (m, d) => { const t = Date.UTC(y, m, d), w = new Date(t).getUTCDay(); return w === 6 ? t - 864e5 : w === 0 ? t + 864e5 : t; };
+    const all = {
+      "New Year's Day": fixed(0, 1), "MLK Day": nthDow(0, 1, 3), "Presidents Day": nthDow(1, 1, 3), "Memorial Day": lastDow(4, 1),
+      "Juneteenth": fixed(5, 19), "Independence Day": fixed(6, 4), "Labor Day": nthDow(8, 1, 1), "Columbus Day": nthDow(9, 1, 2),
+      "Veterans Day": fixed(10, 11), "Thanksgiving": nthDow(10, 4, 4), "Christmas": fixed(11, 25)
+    };
+    return (holidayCache[y] = (CONFIG.holidays || []).map(n => all[n]).filter(Boolean));
+  }
+  const isHoliday = (t) => { const y = new Date(t).getUTCFullYear(); return [y - 1, y, y + 1].some(yy => holidaysFor(yy).includes(t)); };
+
+  function isPickup(x, t) {
+    const dow = new Date(t).getUTCDay(), base = DAYS.indexOf(x.day);
+    if (x.nth) return dow === base && Math.ceil(new Date(t).getUTCDate() / 7) === x.nth;
+    const delayed = (day) => (x.holidayDelay || []).some(d => isHoliday(t - (day - DAYS.indexOf(d)) * 864e5)); // holiday earlier that week?
+    if (dow === base) return !delayed(base);
+    if (dow === (base + 1) % 7) return delayed(base + 1);
+    return false;
+  }
+  function updateTrash() { setBar($("trashBar"), trashText()); }
+
+  let points = store.get("wx_points");
+  if (points && (points.lat !== CONFIG.lat || points.lon !== CONFIG.lon)) points = null;
+
+  function showWeather(w) {
+    const now = Date.now();
+    const hours = w.hourly.filter(p => new Date(p.endTime).getTime() > now); // drop hours already past
+    const daily = w.daily.filter(p => new Date(p.endTime).getTime() > now); // drop day/night periods already over
+    if (!hours.length || !daily.length) return false;
+    renderNow(hours, daily);
+    renderWeek(daily);
+    showFreeze(daily);
+    heatHours = hours; renderHeat();
+    nightW = w; renderNightWx();
+    $("updated").textContent = "Weather updated " + fmtTime(new Date(w.at), { hour: "numeric", minute: "2-digit" }) + (w.src === "om" ? " · backup forecast (Open-Meteo) — weather service forecast is down" : "") + " · v" + VERSION;
+    return true;
+  }
+  const cached = store.get("wx_data");
+  if (cached && Date.now() - cached.at < 6 * 60 * 60 * 1000) { try { showWeather(cached); } catch (e) { console.error(e); } }
+
+  // National Weather Service forecast (the main source)
+  async function loadNws() {
+    if (!points) {
+      const p = (await getJSON(`https://api.weather.gov/points/${CONFIG.lat},${CONFIG.lon}`)).properties;
+      points = { lat: CONFIG.lat, lon: CONFIG.lon, forecast: p.forecast, forecastHourly: p.forecastHourly };
+      store.set("wx_points", points);
+    }
+    const [hourly, daily] = await Promise.all([getJSON(points.forecastHourly), getJSON(points.forecast)]);
+    const hp = hourly.properties && hourly.properties.periods, dp = daily.properties && daily.properties.periods;
+    if (!hp || !hp.length || !dp || !dp.length) throw new Error("NWS forecast came back empty");
+    return { at: Date.now(), src: "nws", hourly: hp.slice(0, 24), daily: dp };
+  }
+
+  // Backup forecast from Open-Meteo (free, no key), reshaped to look like the weather service's data so the page shows it the same way
+  function wmoText(c, pop, isDay) {
+    let s;
+    if (c >= 95) s = "Thunderstorms";
+    else if (c === 85 || c === 86) s = "Snow Showers";
+    else if (c >= 80) s = "Rain Showers";
+    else if (c >= 71) s = "Snow";
+    else if (c === 66 || c === 67) s = "Freezing Rain";
+    else if (c >= 61) s = c === 65 ? "Heavy Rain" : c === 61 ? "Light Rain" : "Rain";
+    else if (c === 56 || c === 57) s = "Freezing Drizzle";
+    else if (c >= 51) s = "Drizzle";
+    else if (c >= 45) s = "Fog";
+    else if (c === 3) s = "Cloudy";
+    else if (c === 2) s = isDay ? "Partly Sunny" : "Partly Cloudy";
+    else if (c === 1) s = isDay ? "Mostly Sunny" : "Mostly Clear";
+    else s = isDay ? "Sunny" : "Clear";
+    if (c >= 51 && pop < 60) s = (pop < 30 ? "Slight Chance " : "Chance ") + s;
+    return s;
+  }
+  const compass = (deg) => ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"][Math.round(((deg || 0) % 360) / 22.5) % 16];
+  async function loadOpenMeteo() {
+    const d = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.lat}&longitude=${CONFIG.lon}&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,is_day&temperature_unit=fahrenheit&wind_speed_unit=mph&timezone=${encodeURIComponent(TZ)}&forecast_days=8&timeformat=unixtime`);
+    const H = d.hourly, now = Date.now(), raw = [];
+    for (let i = 0; i < H.time.length; i++) {
+      const t = H.time[i] * 1000;
+      if (t + 3600 * 1000 <= now || H.temperature_2m[i] == null) continue;
+      const pop = H.precipitation_probability[i] || 0, code = H.weather_code[i] || 0, day = H.is_day[i] === 1;
+      raw.push({ t: t, temp: H.temperature_2m[i], pop: pop, code: code, ws: H.wind_speed_10m[i] || 0, wd: H.wind_direction_10m[i], rh: H.relative_humidity_2m[i], isDay: day, localHour: tzParts(new Date(t)).hour });
+    }
+    if (!raw.length) throw new Error("Open-Meteo came back empty");
+    const iso = (t) => new Date(t).toISOString();
+    const hourly = raw.slice(0, 24).map((h) => ({
+      startTime: iso(h.t), endTime: iso(h.t + 3600 * 1000), isDaytime: h.isDay, temperature: Math.round(h.temp),
+      probabilityOfPrecipitation: { value: h.pop }, relativeHumidity: { value: h.rh },
+      windSpeed: Math.round(h.ws) + " mph", windDirection: compass(h.wd), shortForecast: wmoText(h.code, h.pop, h.isDay)
+    }));
+    // Day (6 AM–6 PM) and night (6 PM–6 AM) periods, like the weather service's 7-day forecast
+    const groups = [];
+    raw.forEach((h) => {
+      const isDay = h.localHour >= 6 && h.localHour < 18;
+      const g = groups[groups.length - 1];
+      if (g && g.isDay === isDay) g.hrs.push(h); else groups.push({ isDay: isDay, hrs: [h] });
+    });
+    const daily = groups.slice(0, 14).map((g, idx) => {
+      const temps = g.hrs.map(h => h.temp), pops = g.hrs.map(h => h.pop);
+      const temp = Math.round(g.isDay ? Math.max.apply(null, temps) : Math.min.apply(null, temps));
+      const pop = Math.max.apply(null, pops);
+      const wet = g.hrs.filter(h => h.code >= 51 && h.pop >= 30);
+      let code;
+      if (wet.length) code = Math.max.apply(null, wet.map(h => h.code));
+      else { const count = {}; g.hrs.forEach(h => { const c = h.code >= 51 ? 3 : h.code; count[c] = (count[c] || 0) + 1; }); code = +Object.keys(count).sort((a, b) => count[b] - count[a])[0]; }
+      const mid = g.hrs[Math.floor(g.hrs.length / 2)];
+      const ws = Math.round(g.hrs.reduce((s, h) => s + h.ws, 0) / g.hrs.length);
+      const short = wmoText(code, pop, g.isDay);
+      const start = g.hrs[0].t, end = g.hrs[g.hrs.length - 1].t + 3600 * 1000;
+      const wk = new Date(start).toLocaleDateString("en-US", { weekday: "long", timeZone: TZ });
+      const name = idx === 0 ? (g.isDay ? "Today" : "Tonight") : wk + (g.isDay ? "" : " Night");
+      const detail = `${short}, with a ${g.isDay ? "high near" : "low around"} ${temp}. ${pop >= 20 ? "Chance of precipitation is " + pop + "%. " : ""}${compass(mid.wd)} wind around ${ws} mph. (Backup forecast from Open-Meteo.)`;
+      return { name: name, startTime: iso(start), endTime: iso(end), isDaytime: g.isDay, temperature: temp, probabilityOfPrecipitation: { value: pop }, windSpeed: ws + " mph", windDirection: compass(mid.wd), shortForecast: short, detailedForecast: detail };
+    });
+    return { at: Date.now(), src: "om", hourly: hourly, daily: daily };
+  }
+
+  let nwsFails = 0;
+  async function loadWeather() {
+    let w = null;
+    try { w = await loadNws(); nwsFails = 0; }
+    catch (e) {
+      console.error(e);
+      nwsFails++;
+      // The weather service's forecast address for Madison is saved; if it's gone (404) or keeps failing, look it up fresh next time
+      if (e.status === 404 || nwsFails >= 3) { points = null; try { localStorage.removeItem("wx_points"); } catch (x) {} }
+      try { w = await loadOpenMeteo(); } catch (e2) { console.error(e2); }
+    }
+    if (w) {
+      store.set("wx_data", w);
+      try { showWeather(w); } catch (e) { console.error(e); }
+      markWxOk();
+    } else {
+      $("updated").textContent = "Weather unavailable — retrying soon · v" + VERSION;
+      if (!$("nowTemp").dataset.ok) $("nowText").textContent = "Forecast unavailable";
+    }
+    alertWatchdog();
+  }
+
+  let hrHours = []; // the next 24 hours, for the tap-for-24-hours panel
+  function renderNow(hours, days) {
+    hrHours = hours.slice(0, 24);
+    const h = hours[0];
+    $("nowIcon").innerHTML = icon(h.shortForecast, h.isDaytime, h.startTime);
+    $("nowTemp").innerHTML = `${h.temperature}<sup>°</sup>`;
+    $("nowTemp").dataset.ok = "1";
+    $("nowText").textContent = h.shortForecast;
+    const today = days[0];
+    const hiLo = today.isDaytime ? `High ${today.temperature}°` : `Low ${today.temperature}°`;
+    const wind = h.windSpeed ? ` · Wind ${h.windDirection} ${h.windSpeed}` : "";
+    $("nowMeta").textContent = hiLo + wind;
+    try { const r = rainLine(hours); $("nowRain").className = r.wet ? "wet" : ""; $("nowRain").innerHTML = r.text ? ICONS.drop() + r.text : ""; } catch (e) { console.error(e); }
+    $("hourly").innerHTML = hours.slice(1, 9).map((p) => {
+      const t = fmtTime(new Date(p.startTime), { hour: "numeric" }).replace(" ", "").toLowerCase();
+      return `<div class="hour"><div class="h">${t}</div><div class="i">${icon(p.shortForecast, p.isDaytime, p.startTime)}</div><div class="t">${p.temperature}°</div><div class="p">${pop(p)}</div></div>`;
+    }).join("");
+  }
+
+  // One line under current conditions: when rain starts or stops in the next few hours
+  function rainLine(hours) {
+    const R = CONFIG.rainLine;
+    if (!R || !hours.length) return {};
+    const ahead = hours.slice(0, R.hoursAhead || 12);
+    const chance = (p) => (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0;
+    const wet = (p) => chance(p) >= R.chance;
+    const kind = (p) => { const s = (p.shortForecast || "").toLowerCase(); return /thunder|storm/.test(s) ? "Storms" : /snow|flurr/.test(s) ? "Snow" : /sleet|freezing|ice/.test(s) ? "Wintry mix" : "Rain"; };
+    const at = (p) => fmtTime(new Date(p.startTime), { hour: "numeric" });
+    if (wet(hours[0])) {
+      let stop = -1;
+      for (let i = 1; i < hours.length; i++) if (!wet(hours[i])) { stop = i; break; }
+      return { wet: true, text: stop < 0 ? `${kind(hours[0])} likely for the next ${hours.length}+ hours` : `${kind(hours[0])} ending around ${at(hours[stop])}` };
+    }
+    const first = ahead.filter(wet)[0];
+    if (first) return { wet: true, text: `${kind(first)} likely starting around ${at(first)}` };
+    const max = ahead.reduce((m, p) => chance(p) > chance(m) ? p : m, ahead[0]);
+    if (chance(max) >= 20) return { text: `Mostly dry · ${chance(max)}% chance of ${kind(max).toLowerCase()} around ${at(max)}` };
+    return { text: `Dry for the next ${ahead.length} hours` };
+  }
+
+  function renderWeek(periods) {
+    // Pair day + night periods into one column per day
+    const days = [];
+    for (let i = 0; i < periods.length; i++) {
+      const p = periods[i];
+      if (p.isDaytime) {
+        const n = periods[i + 1] && !periods[i + 1].isDaytime ? periods[i + 1] : null;
+        days.push({ name: p.name, day: p, night: n });
+        if (n) i++;
+      } else if (i === 0) {
+        days.push({ name: "Tonight", day: null, night: p });
+      }
+    }
+    weekDays = days.slice(0, 7);
+    $("week").innerHTML = days.slice(0, 7).map((d, idx) => {
+      const main = d.day || d.night;
+      let name = d.name;
+      if (/^(Today|This Afternoon|Tonight|Overnight)$/i.test(name)) name = d.day ? "Today" : "Tonight";
+      else {
+        const dt = new Date(main.startTime); // holidays like "Veterans Day" still show the weekday
+        name = isNaN(dt) ? name.slice(0, 3) : dt.toLocaleDateString("en-US", { weekday: "short", timeZone: TZ });
+      }
+      const hi = d.day ? `${d.day.temperature}°` : "";
+      const lo = d.night ? `<span>${d.night.temperature}°</span>` : "";
+      d.label = name;
+      return `<div class="day ${idx === 0 ? "today" : ""}" data-idx="${idx}"><div class="d">${name}</div><div class="i">${icon(main.shortForecast, !!d.day, main.startTime)}</div><div class="t">${hi}${lo}</div><div class="p">${pop(main)}</div></div>`;
+    }).join("");
+  }
+
+  /* ---------- Day details panel ---------- */
+  let ddTimer = null;
+  const esc = (s) => String(s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function showDay(i) {
+    const d = weekDays[i];
+    if (!d) return;
+    const main = d.day || d.night;
+    const dt = new Date(main.startTime);
+    const dateTxt = isNaN(dt) ? "" : dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
+    const part = (p, label) => {
+      if (!p) return "";
+      const rain = p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value ? `<span>${p.probabilityOfPrecipitation.value}% chance of rain</span>` : "";
+      return `<div class="dd-part">${icon(p.shortForecast, p.isDaytime, p.startTime)}<div>
+        <div class="dd-label">${esc(label)}</div>
+        <div class="dd-temp">${p.isDaytime ? "High" : "Low"} ${p.temperature}°${rain}</div>
+        <div class="dd-text">${esc(p.detailedForecast || p.shortForecast)}</div></div></div>`;
+    };
+    const dayName = d.day ? d.day.name : "";
+    $("ddCard").innerHTML = `<div class="dd-head"><div class="dd-title">${esc(dateTxt || d.label)}</div>
+        <button class="rbtn" id="ddRadar">Radar</button><button class="rbtn close" id="ddClose">&times; Close</button></div>
+      ${part(d.day, /^(Today|This Afternoon)$/i.test(dayName) ? dayName : "Day")}${part(d.night, d.night && /^(Tonight|Overnight)$/i.test(d.night.name) ? d.night.name : "Night")}`;
+    $("dayDetail").classList.add("open");
+    $("ddClose").onclick = closeDay;
+    $("ddRadar").onclick = () => { closeDay(); openRadar(); };
+    clearTimeout(ddTimer); ddTimer = setTimeout(closeDay, 60 * 1000); // back to home after a minute
+  }
+  function closeDay() { $("dayDetail").classList.remove("open"); clearTimeout(ddTimer); }
+  $("dayDetail").addEventListener("click", (e) => { if (e.target.id === "dayDetail") closeDay(); }); // tap outside the card to close
+
+  /* ---------- Next 24 hours (tap the hourly strip) ---------- */
+  let hrTimer = null;
+  function showHours() {
+    const hs = hrHours.filter(p => new Date(p.endTime).getTime() > Date.now());
+    if (!hs.length) return;
+    const n = hs.length, temps = hs.map(p => p.temperature);
+    const lo = Math.min.apply(null, temps), hi = Math.max.apply(null, temps), span = Math.max(hi - lo, 6);
+    const x = (i) => (i + 0.5) / n * 100, y = (t) => 8 + (hi - t) / span * 84;          // percent of the chart box
+    const pts = hs.map((p, i) => (x(i) * 10).toFixed(1) + "," + y(p.temperature).toFixed(1)).join(" ");
+    const area = "0," + y(hs[0].temperature).toFixed(1) + " " + pts + " 1000," + y(hs[n - 1].temperature).toFixed(1) + " 1000,100 0,100";
+    const every = (i) => i % 3 === 0;
+    const hourTxt = (p) => fmtTime(new Date(p.startTime), { hour: "numeric" }).replace(" ", "").toLowerCase();
+    const isMidnight = (p) => tzParts(new Date(p.startTime)).hour === 0;
+    const chance = (p) => (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0;
+    const mid = hs.map(isMidnight), nearMid = (i) => mid[i - 1] || mid[i + 1];  // no hour label right beside the day name
+    const times = hs.map((p, i) => `<div class="hr-time${mid[i] ? " hr-mid" : ""}">${mid[i] ? "<b>" + new Date(p.startTime).toLocaleDateString("en-US", { weekday: "short", timeZone: TZ }) + "</b>" : every(i) && !nearMid(i) ? hourTxt(p) : ""}</div>`).join("");
+    const icons = hs.map((p, i) => `<div class="hr-icon">${every(i) ? icon(p.shortForecast, p.isDaytime, p.startTime) : ""}</div>`).join("");
+    const labels = hs.map((p, i) => every(i) || p.temperature === hi || p.temperature === lo ? `<div class="hr-dot" style="left:${x(i)}%;top:${y(p.temperature)}%"></div>` + (every(i) ? `<div class="hr-t" style="left:${x(i)}%;top:${y(p.temperature)}%">${p.temperature}°</div>` : "") : "").join("");
+    const bars = hs.map((p) => `<div style="height:${Math.max(chance(p), 0)}%"></div>`).join("");
+    const pops = hs.map((p, i) => `<div class="hr-pop">${every(i) && chance(p) >= 10 ? chance(p) + "%" : ""}</div>`).join("");
+    const hiP = hs[temps.indexOf(hi)], loP = hs[temps.indexOf(lo)];
+    const maxRain = hs.reduce((m, p) => chance(p) > chance(m) ? p : m, hs[0]);
+    const sum = `High ${hi}° around ${hourTxt(hiP)} · low ${lo}° around ${hourTxt(loP)}` + (chance(maxRain) >= 20 ? ` · best chance of rain ${chance(maxRain)}% around ${hourTxt(maxRain)}` : " · little or no rain");
+    $("hrCard").innerHTML = `<div class="dd-head"><div class="dd-title">Next 24 hours</div><button class="rbtn" id="hrRadar">Radar</button><button class="rbtn close" id="hrClose">&times; Close</button></div>
+      <div class="hr-row">${times}</div><div class="hr-row">${icons}</div>
+      <div class="hr-chart"><svg viewBox="0 0 1000 100" preserveAspectRatio="none"><defs><linearGradient id="hrFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbbf24" stop-opacity="0.28"/><stop offset="1" stop-color="#fbbf24" stop-opacity="0"/></linearGradient></defs>
+        <polygon points="${area}" fill="url(#hrFill)"/><polyline points="${pts}" fill="none" stroke="#fbbf24" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>${labels}</div>
+      <div class="hr-legend">Chance of rain</div><div class="hr-row hr-rain">${bars}</div><div class="hr-row">${pops}</div>
+      <div class="hr-sum">${esc(sum)}</div>`;
+    $("hrDetail").classList.add("open");
+    $("hrClose").onclick = closeHours;
+    $("hrRadar").onclick = () => { closeHours(); openRadar(); };
+    clearTimeout(hrTimer); hrTimer = setTimeout(closeHours, 60 * 1000); // back to home after a minute
+  }
+  function closeHours() { $("hrDetail").classList.remove("open"); clearTimeout(hrTimer); }
+  $("hourly").addEventListener("click", (e) => { e.stopPropagation(); showHours(); }); // the rest of the weather card still opens radar
+  $("hrDetail").addEventListener("click", (e) => { if (e.target.id === "hrDetail") closeHours(); });
+
+  /* ---------- Severe weather wake-up ---------- */
+  // front = also pull Fully in front of other apps (e.g. Chrome on the Wyze tile). Only done when a warning is first issued,
+  // then at most every 5 minutes, so you can stay on the cameras during a warning.
+  const FRONT_EVERY = 5 * 60 * 1000;
+  let lastFront = 0;
+  function wakeScreen(front) {
+    const f = window.fully;
+    if (!f) return;
+    if (front) { lastFront = Date.now(); try { if (typeof f.bringToForeground === "function") f.bringToForeground(); } catch (e) {} }
+    try { if (typeof f.stopScreensaver === "function") f.stopScreensaver(); } catch (e) {}
+    try { if (typeof f.turnScreenOn === "function") f.turnScreenOn(); } catch (e) {}
+  }
+  let alertTimer = null;
+  function scheduleAlerts(ms) { clearTimeout(alertTimer); alertTimer = setTimeout(loadAlerts, ms); }
+
+  function handleSevere(feats) {
+    const now = Date.now();
+    const rules = CONFIG.wakeAlerts || {};
+    const active = feats.filter(a => rules[a.event] && (!a.ends && !a.expires || new Date(a.ends || a.expires).getTime() > now));
+    const keepOn = active.filter(a => rules[a.event] === "keepOn");
+    const seen = store.get("wx_seen_alerts") || {};
+    // New = not seen before, and not an update/extension of an alert already seen (NWS lists the earlier versions in "references")
+    const refSeen = (a) => (a.references || []).some(r => seen[r.identifier] || seen[r["@id"]]);
+    const isNew = active.filter(a => !seen[a.id] && !refSeen(a));
+    active.forEach(a => { seen[a.id] = new Date(a.ends || a.expires || now + 864e5).getTime(); });
+    Object.keys(seen).forEach(id => { if (seen[id] < now - 864e5) delete seen[id]; }); // forget old alerts
+    store.set("wx_seen_alerts", seen);
+
+    const banner = $("severe");
+    if (!active.length) {
+      if (severeActive && radar.classList.contains("open")) { clearTimeout(radarAutoClose); radarAutoClose = setTimeout(closeRadar, 5 * 60 * 1000); }
+      if (severeActive) { severeActive = false; applyBrightness(new Date()); }
+      sevList = [];
+      banner.style.display = "none"; document.body.classList.remove("severe-on"); layoutBars();
+      return 5 * 60 * 1000; // normal: check every 5 minutes
+    }
+    const rank = (a) => /tornado warning/i.test(a.event) ? 0 : 1;   // a tornado warning outranks a thunderstorm warning
+    const sorted = keepOn.slice().sort((a, b) => rank(a) - rank(b) || threatRank(b) - threatRank(a));
+    const top = sorted[0] || active[0];
+    sevList = sorted.concat(active.filter(a => keepOn.indexOf(a) < 0));
+    const until = top.ends || top.expires;
+    const untilTxt = until ? "until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
+    const th = threatInfo(top);
+    banner.className = (/tornado warning/i.test(top.event) ? "tornado" : /thunderstorm warning/i.test(top.event) ? "tstorm" : "watch") + (th.emergency ? " emergency" : "");
+    const sub = [th.note].concat((top.areaDesc || "").split(";").slice(0, 3).map(s => s.trim())).filter(Boolean).join(" · ");
+    banner.innerHTML = `${ICONS.alert()} ${esc(th.title)} ${untilTxt}<small>${esc(sub)} · <b>tap for details</b></small>`;
+    banner.style.display = "block"; document.body.classList.add("severe-on"); layoutBars();
+    if ($("sevDetail").classList.contains("open")) renderAlertDetail(sevList);
+
+    severeActive = keepOn.length > 0;
+    applyBrightness(new Date());
+    // A brand-new warning (not an update of one already showing) or a new watch pulls the dashboard in front of other apps right away;
+    // after that, only every 5 minutes, so you can stay on the cameras.
+    const newIssue = isNew.length > 0;
+    const front = newIssue || Date.now() - lastFront >= FRONT_EVERY;
+    if (keepOn.length) { closeDay(); closeHours(); wakeScreen(front); openRadar(); }   // warnings: keep the screen on and radar open
+    else if (isNew.length) { closeDay(); closeHours(); wakeScreen(true); openRadar(); } // watches: wake once when issued
+    return keepOn.length ? 60 * 1000 : 2 * 60 * 1000;        // check more often during a watch or warning
+  }
+
+  // Extra wording the weather service attaches to the worst storms: tornado emergency, "particularly dangerous situation",
+  // confirmed (observed) tornado, destructive thunderstorm winds/hail.
+  const P1 = (a, k) => { const v = a.parameters && a.parameters[k]; return (v && v[0] ? String(v[0]) : "").toUpperCase(); };
+  function threatInfo(a) {
+    const ev = a.event || "", text = ((a.headline || "") + " " + (a.description || "")).toUpperCase();
+    const tdt = P1(a, "tornadoDamageThreat"), sdt = P1(a, "thunderstormDamageThreat"), det = P1(a, "tornadoDetection");
+    let title = ev.toUpperCase(), note = "", emergency = false;
+    if (/tornado warning/i.test(ev)) {
+      if (tdt === "CATASTROPHIC" || /TORNADO EMERGENCY/.test(text)) { title = "TORNADO EMERGENCY"; emergency = true; }
+      else if (tdt === "CONSIDERABLE" || /PARTICULARLY DANGEROUS SITUATION/.test(text)) title = "PDS TORNADO WARNING";
+      note = det === "OBSERVED" ? "Confirmed tornado" : det ? "Radar indicated" : "";
+      if (title === "PDS TORNADO WARNING") note = "Particularly dangerous situation" + (note ? " · " + note : "");
+    } else if (/thunderstorm warning/i.test(ev)) {
+      if (sdt === "DESTRUCTIVE") { title = "DESTRUCTIVE " + title; note = "Destructive winds or hail"; }
+      else if (sdt === "CONSIDERABLE") note = "Considerable damage threat";
+      if (det) note = (note ? note + " · " : "") + (det === "POSSIBLE" ? "Tornado possible" : "Tornado " + det.toLowerCase());
+    } else if (/PARTICULARLY DANGEROUS SITUATION/.test(text)) {
+      title = "PDS " + title; note = "Particularly dangerous situation";
+    }
+    return { title: title, note: note, emergency: emergency };
+  }
+  const threatRank = (a) => { const t = threatInfo(a); return t.emergency ? 3 : /^PDS|^DESTRUCTIVE/.test(t.title) ? 2 : 1; };
+
+  /* ---------- Alert details (tap the warning banner or the alert list) ---------- */
+  let sevList = [], allAlerts = [], sevTimer = null, sdHtml = null;
+  function paras(s) { // weather service text is hard-wrapped; join lines into paragraphs
+    return String(s || "").split(/\n\s*\n/).map(p => p.replace(/\s*\n\s*/g, " ").trim()).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join("");
+  }
+  function renderAlertDetail(list) {
+    const html = list.map((a) => {
+      const th = threatInfo(a), until = a.ends || a.expires;
+      const untilTxt = until ? "Until " + new Date(until).toLocaleString("en-US", { weekday: "long", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
+      return `<div class="sd-alert"><div class="sd-event${th.emergency ? " emergency" : ""}">${esc(th.title)}</div>
+        <div class="sd-meta">${esc([untilTxt, th.note].filter(Boolean).join(" · "))}</div>
+        ${a.instruction ? `<div class="sd-do"><div class="sd-label">What to do</div>${paras(a.instruction)}</div>` : ""}
+        <div class="sd-text">${paras(a.description)}</div>
+        <div class="sd-area">${esc((a.areaDesc || "").split(";").map(s => s.trim()).join(" · "))}</div></div>`;
+    }).join("") || `<div class="muted">No active alerts.</div>`;
+    const full = `<div class="dd-head"><div class="dd-title">Weather alerts · National Weather Service</div>
+      <button class="rbtn" id="sdRadar">Radar</button><button class="rbtn close" id="sdClose">&times; Close</button></div>${html}`;
+    if (full === sdHtml) return; // unchanged: keep the scroll position while reading
+    sdHtml = full;
+    $("sdCard").innerHTML = full;
+    $("sdClose").onclick = closeAlertDetail;
+    $("sdRadar").onclick = () => { closeAlertDetail(); openRadar(); };
+  }
+  function showAlertDetail(list) {
+    sdHtml = null; renderAlertDetail(list); $("sdCard").scrollTop = 0;
+    $("sevDetail").classList.add("open");
+    clearTimeout(sevTimer); sevTimer = setTimeout(closeAlertDetail, 3 * 60 * 1000); // back to radar / home after 3 minutes
+  }
+  function closeAlertDetail() { $("sevDetail").classList.remove("open"); clearTimeout(sevTimer); }
+  $("severe").addEventListener("click", () => showAlertDetail(sevList.length ? sevList : allAlerts));
+  $("alerts").addEventListener("click", () => showAlertDetail(allAlerts));
+  $("sevDetail").addEventListener("click", (e) => { if (e.target.id === "sevDetail") closeAlertDetail(); });
+
+  let alertDone = 0, alertInFlight = 0;
+  async function loadAlerts() {
+    let next = 5 * 60 * 1000;
+    alertInFlight = Date.now();
+    try {
+      const data = await getJSON(`https://api.weather.gov/alerts/active?point=${CONFIG.lat},${CONFIG.lon}`);
+      // Only real alerts: skip test messages and cancellations
+      const feats = (data.features || []).map(f => f.properties).filter(a => a && (!a.status || a.status === "Actual") && a.messageType !== "Cancel");
+      allAlerts = feats;
+      next = handleSevere(feats);
+      setColdAlerts(feats);
+      setHeatAlerts(feats);
+      markAlertOk();
+      const box = $("alerts"), listed = feats.filter(a => !coldOf(a.event) && !(CONFIG.heat && heatOf(a.event))); // frost/freeze and heat alerts show as top banners instead
+      if (!listed.length) { box.style.display = "none"; box.innerHTML = ""; }
+      else {
+      box.style.display = "block";
+      box.innerHTML = listed.slice(0, 3).map((a) => {
+        const sev = (a.severity || "").toLowerCase();
+        const cls = sev === "extreme" || sev === "severe" ? "" : sev === "moderate" ? "moderate" : "minor";
+        const until = a.ends || a.expires;
+        const untilTxt = until ? " until " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZone: TZ }) : "";
+        return `<div class="alert ${cls}">${ICONS.alert()} ${esc(a.event)}${untilTxt}</div>`;
+      }).join("");
+      }
+    } catch (e) { console.error(e); next = 2 * 60 * 1000; }
+    alertInFlight = 0; alertDone = Date.now();
+    scheduleAlerts(next);
+  }
+  // Safety net: if no alert check has finished in 10 minutes (e.g. the timer was paused), start one now
+  function alertWatchdog() {
+    const now = Date.now();
+    if (alertInFlight && now - alertInFlight < 60 * 1000) return;
+    if (now - alertDone > 10 * 60 * 1000) loadAlerts();
+  }
+  // Check right away whenever the screen comes back on
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAlerts(); });
+
+  /* ---------- Countdowns (card under the tiles) ---------- */
+  const CD_THEME = { "New Year's Day": "newyear", "Valentine's Day": "valentine", "Easter": "easter", "Mother's Day": "mom", "Father's Day": "dad", "Independence Day": "july4", "Thanksgiving": "thanks", "Christmas": "xmas" };
+  const PARTY = `<span class="ic"><svg viewBox="0 0 64 64"><path d="M10 56 L26 14 L50 38Z" fill="#fbd38d"/><path d="M26 14 L50 38" stroke="#f687b3" stroke-width="4"/><circle cx="44" cy="12" r="3" fill="#90cdf4"/><circle cx="54" cy="24" r="2.5" fill="#90cdf4"/><circle cx="36" cy="6" r="2.5" fill="#68d391"/><circle cx="56" cy="8" r="2" fill="#f687b3"/></svg></span>`;
+  function nthWeekday(y, m, dow, n) { const first = new Date(Date.UTC(y, m, 1)).getUTCDay(); return Date.UTC(y, m, 1 + ((dow - first + 7) % 7) + (n - 1) * 7); }
+  function easterDay(y) { // Gregorian computus
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1;
+    return Date.UTC(y, month - 1, day);
+  }
+  function holidayDay(name, y) {
+    switch (name) {
+      case "New Year's Day": return Date.UTC(y, 0, 1);
+      case "Valentine's Day": return Date.UTC(y, 1, 14);
+      case "Easter": return easterDay(y);
+      case "Mother's Day": return nthWeekday(y, 4, 0, 2);
+      case "Father's Day": return nthWeekday(y, 5, 0, 3);
+      case "Independence Day": return Date.UTC(y, 6, 4);
+      case "Thanksgiving": return nthWeekday(y, 10, 4, 4);
+      case "Christmas": return Date.UTC(y, 11, 25);
+    }
+    return null;
+  }
+  function countdownItems(opts) {
+    const C = CONFIG.countdowns;
+    if (!C) return [];
+    opts = opts || {};
+    const ahead = opts.daysAhead || C.daysAhead || 60;
+    const p = tzParts(new Date()), today = Date.UTC(p.year, p.month - 1, p.day), list = [];
+    const add = (name, t, theme, what) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= ahead) list.push({ name: name, t: t, d: d, theme: theme, what: what }); };
+    [p.year, p.year + 1].forEach((y) => {
+      (C.holidays || []).forEach((h) => { const t = holidayDay(h, y); if (t !== null) add(h, t, CD_THEME[h] || "event"); });
+      (C.events || []).forEach((e) => {
+        const m = /^(?:(\d{4})-)?(\d{1,2})-(\d{1,2})$/.exec(e.date || "");
+        if (!m || (m[1] && +m[1] !== y)) return;
+        add(e.name, Date.UTC(y, +m[2] - 1, +m[3]), e.theme || "event", e.what);
+      });
+    });
+    list.sort((a, b) => a.d - b.d);
+    return opts.all ? list : list.slice(0, C.show || 3);
+  }
+  let cdHtml = null;
+  function renderCountdowns() {
+    const items = countdownItems();
+    const html = items.map((it) => {
+      const when = it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow" : new Date(it.t).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+      return `<div class="cdi cd-${it.theme}${it.d === 0 ? " today" : ""}" title="${esc((it.what ? it.what + " · " : "") + it.name)}"><div class="cdn">${it.d === 0 ? PARTY : it.d}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${when}</div></div></div>`;
+    }).join("");
+    if (html === cdHtml) return;
+    cdHtml = html;
+    $("cdRow").innerHTML = html;
+    $("cdRow").style.gridTemplateColumns = `repeat(${Math.max(items.length, 1)}, minmax(0, 1fr))`;
+    document.body.classList.toggle("cd-on", items.length > 0);
+  }
+  try { renderCountdowns(); } catch (e) { console.error(e); }
+
+  // Tap the countdown card: every holiday and family date for the next 12 months
+  let cdTimer = null;
+  function showAllCountdowns() {
+    const items = countdownItems({ all: true, daysAhead: 364 }); // one year, without today's event showing twice
+    let month = "";
+    const html = items.map((it) => {
+      const dt = new Date(it.t);
+      const m = dt.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
+      const head = m !== month ? `<div class="cda-month">${m}</div>` : "";
+      month = m;
+      const when = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
+      const big = it.d === 0 ? PARTY : `${it.d}<small>${it.d === 1 ? "day" : "days"}</small>`;
+      return `${head}<div class="cdi cda cd-${it.theme}${it.d === 0 ? " today" : ""}"><div class="cdn">${big}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${it.what && it.what !== "Birthday" ? esc(it.what) + " · " : ""}${it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow · " + when : when}</div></div></div>`;
+    }).join("") || `<div class="muted">Nothing on the calendar in the next 12 months.</div>`;
+    $("cdCard").innerHTML = `<div class="dd-head"><div class="dd-title">Coming up this year</div><button class="rbtn close" id="cdClose">&times; Close</button></div><div class="cda-list">${html}</div>`;
+    $("cdDetail").classList.add("open");
+    $("cdClose").onclick = closeAllCountdowns;
+    clearTimeout(cdTimer); cdTimer = setTimeout(closeAllCountdowns, 90 * 1000); // back to home after 90 seconds
+  }
+  function closeAllCountdowns() { $("cdDetail").classList.remove("open"); clearTimeout(cdTimer); }
+  $("cd").addEventListener("click", showAllCountdowns);
+  $("cdDetail").addEventListener("click", (e) => { if (e.target.id === "cdDetail") closeAllCountdowns(); });
+
+  // Family dates: decrypt the locked list with the passcode saved on this screen (AES-GCM, key from PBKDF2).
+  let cdUnlocked = false;
+  const CD_PASS = "cd_pass";
+  function b64u8(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  async function cdDecrypt(pass) {
+    const L = CONFIG.countdowns && CONFIG.countdowns.locked;
+    if (!L || !window.crypto || !crypto.subtle) throw new Error("no crypto");
+    const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64u8(L.s), iterations: 100000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const out = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64u8(L.i) }, key, b64u8(L.c));
+    return JSON.parse(new TextDecoder().decode(out));
+  }
+  async function cdTryUnlock(pass, fromUser) {
+    try {
+      const evs = await cdDecrypt(pass);
+      CONFIG.countdowns.events = evs; cdUnlocked = true; cdHtml = null;
+      try { localStorage.setItem(CD_PASS, pass); } catch (e) {}
+      renderCountdowns();
+      if (fromUser) { toast("Family dates unlocked on this screen"); showAllCountdowns(); }
+      return true;
+    } catch (e) {
+      if (fromUser) toast(window.crypto && crypto.subtle ? "That passcode didn't work" : "This browser can't unlock the family dates");
+      return false;
+    }
+  }
+  function cdLockForm() {
+    if (cdUnlocked || !(CONFIG.countdowns && CONFIG.countdowns.locked)) return;
+    const list = document.querySelector("#cdCard .cda-list");
+    if (!list) return;
+    const f = document.createElement("div");
+    f.className = "cd-lock";
+    f.innerHTML = `<div class="cd-lock-t">Family birthdays and anniversaries are locked on this screen.</div><input id="cdPass" type="password" autocomplete="off" placeholder="Passcode"><button class="rbtn" id="cdPassGo">Unlock</button>`;
+    list.insertBefore(f, list.firstChild);
+    const go = () => { const v = $("cdPass").value.trim(); if (v) cdTryUnlock(v, true); };
+    $("cdPassGo").onclick = go;
+    $("cdPass").addEventListener("keydown", (e) => { if (e.key === "Enter") go(); });
+    $("cdPass").addEventListener("input", () => { clearTimeout(cdTimer); cdTimer = setTimeout(closeAllCountdowns, 90 * 1000); });
+  }
+  $("cd").addEventListener("click", cdLockForm);
+  (function () {
+    let pass = null;
+    const m = /[#&]cd=([^&]+)/.exec(location.hash || "");
+    if (m) { pass = decodeURIComponent(m[1]); try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {} }
+    if (!pass) { try { pass = localStorage.getItem(CD_PASS); } catch (e) {} }
+    if (pass) cdTryUnlock(pass, false).then((ok) => { if (!ok && !m) { try { localStorage.removeItem(CD_PASS); } catch (e) {} } });
+  })();
+  setInterval(() => { try { renderCountdowns(); } catch (e) {} }, 5 * 60 * 1000);
+
+  /* ---------- Air quality banner (Open-Meteo US AQI, free, no key) — only when the air is actually bad ---------- */
+  const SMOKE = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"><path d="M8 22h30a8 8 0 1 0-8-8"/><path d="M8 34h44a8 8 0 1 1-8 8"/><path d="M8 46h22"/></g></svg></span>`;
+  const AIR = [[150, "UNHEALTHY FOR SENSITIVE GROUPS", "sensitive groups should limit time outdoors"], [200, "UNHEALTHY", "limit time outdoors"], [300, "VERY UNHEALTHY", "stay indoors, keep windows closed"], [1e9, "HAZARDOUS", "stay indoors, keep windows closed"]];
+  async function loadAir() {
+    const min = CONFIG.airBanner;
+    if (min == null) { setBar($("airBar"), ""); return; }
+    try {
+      const d = await getJSON(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CONFIG.lat}&longitude=${CONFIG.lon}&current=us_aqi`);
+      const v = d.current ? d.current.us_aqi : null;
+      if (v == null || v < min) { setBar($("airBar"), ""); return; }
+      const lvl = AIR.filter(a => v <= a[0])[0];
+      $("airBar").classList.toggle("bad", v > 150);
+      setBar($("airBar"), `${SMOKE}AIR QUALITY: ${lvl[1]} · AQI ${Math.round(v)} · ${lvl[2]}`);
+    } catch (e) { console.error(e); }
+  }
+  // Rain that has fallen: past 24 hours and past 7 days (Open-Meteo estimate, inches)
+  async function loadRainTotals() {
+    if (!CONFIG.rainTotals) { $("nowTot").textContent = ""; return; }
+    try {
+      const d = await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${CONFIG.lat}&longitude=${CONFIG.lon}&hourly=precipitation&past_days=7&forecast_days=1&precipitation_unit=inch&timezone=${encodeURIComponent(TZ)}&timeformat=unixtime`);
+      const H = d.hourly, now = Date.now();
+      let day = 0, week = 0;
+      for (let i = 0; i < H.time.length; i++) {
+        const t = H.time[i] * 1000, v = H.precipitation[i] || 0;
+        if (t + 3600 * 1000 > now) continue;                 // only hours that are over
+        if (t >= now - 7 * 864e5) week += v;
+        if (t >= now - 864e5) day += v;
+      }
+      const f = (x) => x < 0.005 ? "0" : x < 0.1 ? x.toFixed(2) : x.toFixed(1);
+      $("nowTot").textContent = week < 0.005 ? "No rain in the past 7 days" : `Rain: ${f(day)}″ past 24 hrs · ${f(week)}″ past 7 days`;
+    } catch (e) { console.error(e); }
+  }
+  setTimeout(loadRainTotals, 600);
+  setInterval(loadRainTotals, 30 * 60 * 1000);
+  setTimeout(loadAir, 400);
+  setInterval(loadAir, 30 * 60 * 1000); // every 30 min
+
+  /* ---------- Periodic checks ---------- */
+  renderExtras();
+  updateTrash();
+  checkPower();
+  setInterval(() => { updateTrash(); checkNet(); checkPower(); alertWatchdog(); }, 60 * 1000);
+
+
+  setTimeout(loadWeather, 50); // let the clock and tiles paint first
+  setInterval(loadWeather, 15 * 60 * 1000);            // weather every 15 min
+  // alerts: checked on load, then every 5 min (every 1–2 min during a watch or warning)
+  // Full refresh every 6 hours — but only while the internet is working, so a reload never lands on an error page
+  setTimeout(function refresh() {
+    if (navigator.onLine !== false && Date.now() - lastOk < 10 * 60 * 1000) location.reload();
+    else setTimeout(refresh, 10 * 60 * 1000);
+  }, 6 * 60 * 60 * 1000);
+})();
+</script>
+</body>
+</html>
