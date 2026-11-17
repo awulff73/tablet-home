@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-16a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-16b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -52,7 +52,7 @@
     // day: "Sun".."Sat". nth: 2 = second one of the month. holidayDelay: pushed back a day when a holiday falls on these days that week.
     pickups: [
       { label: "Trash", day: "Wed", holidayDelay: ["Mon", "Tue", "Wed"] },
-      { label: "Recycling", day: "Fri", nth: 2 }
+      { label: "Recycling", day: "Fri", nth: 2, holidayDelay: ["Mon", "Tue", "Wed", "Thu", "Fri"] }
     ],
     // National holidays that delay pickup (remove any your hauler works through)
     holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
@@ -1157,10 +1157,11 @@
 
   function isPickup(x, t) {
     const dow = new Date(t).getUTCDay(), base = DAYS.indexOf(x.day);
-    if (x.nth) return dow === base && Math.ceil(new Date(t).getUTCDate() / 7) === x.nth;
     const delayed = (day) => (x.holidayDelay || []).some(d => isHoliday(t - (day - DAYS.indexOf(d)) * 864e5)); // holiday earlier that week?
-    if (dow === base) return !delayed(base);
-    if (dow === (base + 1) % 7) return delayed(base + 1);
+    // the regular pickup day (for nth: only the nth one of the month); a holiday that week slides it to the next day
+    const regular = (tt) => new Date(tt).getUTCDay() === base && (!x.nth || Math.ceil(new Date(tt).getUTCDate() / 7) === x.nth);
+    if (regular(t)) return !delayed(base);
+    if (dow === (base + 1) % 7 && regular(t - 864e5)) return delayed(base + 1);
     return false;
   }
   function updateTrash() { setBar($("trashBar"), trashText()); }
@@ -1613,10 +1614,13 @@
     list.sort((a, b) => a.d - b.d);
     return opts.all ? list : list.slice(0, C.show || 3);
   }
-  let cdHtml = null;
+  let cdHtml = null, cdUnlocked = false;
+  // Family dates still locked on this screen: keep the card up even when nothing else is coming, so there's always somewhere to tap to unlock
+  const cdLocked = () => !cdUnlocked && !!(CONFIG.countdowns && CONFIG.countdowns.locked);
   function renderCountdowns() {
     const items = countdownItems();
-    const html = items.map((it) => {
+    const lockTile = !items.length && cdLocked() ? `<div class="cdi cd-event"><div class="cdt"><div class="cdl">Family dates locked</div><div class="cdd">Tap to unlock</div></div></div>` : "";
+    const html = lockTile + items.map((it) => {
       const when = it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow" : new Date(it.t).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
       return `<div class="cdi cd-${it.theme}${it.d === 0 ? " today" : ""}" title="${esc((it.what ? it.what + " · " : "") + it.name)}"><div class="cdn">${it.d === 0 ? PARTY : it.d}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${when}</div></div></div>`;
     }).join("");
@@ -1624,7 +1628,7 @@
     cdHtml = html;
     $("cdRow").innerHTML = html;
     $("cdRow").style.gridTemplateColumns = `repeat(${Math.max(items.length, 1)}, minmax(0, 1fr))`;
-    document.body.classList.toggle("cd-on", items.length > 0);
+    document.body.classList.toggle("cd-on", items.length > 0 || !!lockTile);
   }
   try { renderCountdowns(); } catch (e) { console.error(e); }
 
@@ -1652,7 +1656,6 @@
   $("cdDetail").addEventListener("click", (e) => { if (e.target.id === "cdDetail") closeAllCountdowns(); });
 
   // Family dates: decrypt the locked list with the passcode saved on this screen (AES-GCM, key from PBKDF2).
-  let cdUnlocked = false;
   const CD_PASS = "cd_pass";
   function b64u8(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
   async function cdDecrypt(pass) {
