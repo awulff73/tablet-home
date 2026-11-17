@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-16b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-16c"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -58,12 +58,12 @@
     holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
     pickupRemind: { eveningFrom: 16, morningUntil: 10 },
     // Countdown card under the tiles: the next few holidays and family events within daysAhead days.
-    // Holidays (calculated automatically): New Year's Day, Valentine's Day, Easter, Mother's Day, Father's Day, Independence Day, Thanksgiving, Christmas.
+    // Holidays (calculated automatically): New Year's Day, Valentine's Day, Easter, Mother's Day, Memorial Day, Father's Day, Independence Day, Labor Day, Thanksgiving, Christmas.
     // Events (inside the locked list): date "YYYY-MM-DD" = one time, "MM-DD" = every year. what (optional) is a label for the list; the background shows it (heart = anniversary, cake = birthday). theme: bday, anniv, trip, event, grad (or a holiday look: xmas, thanks, july4, newyear, easter, mom, dad).
     countdowns: {
       show: 3,
       daysAhead: 60,
-      holidays: ["New Year's Day", "Valentine's Day", "Easter", "Mother's Day", "Father's Day", "Independence Day", "Thanksgiving", "Christmas"],
+      holidays: ["New Year's Day", "Valentine's Day", "Easter", "Mother's Day", "Memorial Day", "Father's Day", "Independence Day", "Labor Day", "Thanksgiving", "Christmas"],
       // Family birthdays/anniversaries are locked (this page is public). Each screen asks for the passcode once
       // (tap the countdown card) and remembers it. To change them, tell Claude in chat — it re-locks the list.
       events: [],
@@ -411,6 +411,9 @@
   .cdi.cd-event { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%2381e6d9%22%20stroke-width%3D%222%22%20opacity%3D%22.45%22%3E%3Crect%20x%3D%2288%22%20y%3D%2216%22%20width%3D%2226%22%20height%3D%2226%22%20rx%3D%223%22/%3E%3Cpath%20d%3D%22M88%2024h26M95%2012v8M107%2012v8%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #234e52,#1a2e35); } .cdi.cd-event .cdn { color: #b2f5ea; }
   .cdi.cd-grad { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.65%22%3E%3Cpath%20d%3D%22M89%2025v9c0%204.5%2022%204.5%2022%200v-9l-11%205z%22%20fill%3D%22%233182ce%22/%3E%3Cpath%20d%3D%22M100%2013l19%209-19%209-19-9z%22%20fill%3D%22%2390cdf4%22/%3E%3Cpath%20d%3D%22M100%2022l13%204v9%22%20fill%3D%22none%22%20stroke%3D%22%23fefcbf%22%20stroke-width%3D%221.3%22/%3E%3Crect%20x%3D%22111.3%22%20y%3D%2234%22%20width%3D%223.4%22%20height%3D%228%22%20rx%3D%221.2%22%20fill%3D%22%23fefcbf%22/%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2222%22%20r%3D%221.6%22%20fill%3D%22%231a365d%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23fefcbf%22%20opacity%3D%22.5%22%3E%3Cpath%20d%3D%22M70%2012l1%203%203%201-3%201-1%203-1-3-3-1%203-1z%22/%3E%3Cpath%20d%3D%22M78%2044l.8%202.2%202.2.8-2.2.8-.8%202.2-.8-2.2-2.2-.8%202.2-.8z%22/%3E%3Ccircle%20cx%3D%2264%22%20cy%3D%2230%22%20r%3D%221.2%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1a365d,#0f172a); } .cdi.cd-grad .cdn { color: #fefcbf; }
   .cdi.cd-valentine { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cpath%20transform%3D%22translate%28100%2028%29%20scale%281.35%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fc8181%22%20opacity%3D%22.7%22/%3E%3Cpath%20transform%3D%22translate%2880%2014%29%20scale%280.6%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fbb6ce%22%20opacity%3D%22.55%22/%3E%3Cpath%20transform%3D%22translate%28114%2048%29%20scale%280.5%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fed7e2%22%20opacity%3D%22.5%22/%3E%3Cpath%20transform%3D%22translate%2870%2042%29%20scale%280.45%29%22%20d%3D%22M0%20-3C-2-8-10-7-10%200c0%205%206%209%2010%2012%204-3%2010-7%2010-12%200-7-8-8-10-3z%22%20fill%3D%22%23fc8181%22%20opacity%3D%22.45%22/%3E%3Cg%20fill%3D%22%23fed7e2%22%20opacity%3D%22.45%22%3E%3Ccircle%20cx%3D%2262%22%20cy%3D%2220%22%20r%3D%221.2%22/%3E%3Ccircle%20cx%3D%2288%22%20cy%3D%2250%22%20r%3D%221%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #9b2c2c,#3b0d1e); } .cdi.cd-valentine .cdn { color: #fed7e2; }
+
+  .cdi.cd-memorial { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Cg%20opacity%3D%22.6%22%3E%3Crect%20x%3D%2286%22%20y%3D%2212%22%20width%3D%222%22%20height%3D%2240%22%20rx%3D%221%22%20fill%3D%22%23e2e8f0%22/%3E%3Cpath%20d%3D%22M88%2013c8-3%2014%203%2024%200v18c-10%203-16-3-24%200z%22%20fill%3D%22%23fc8181%22/%3E%3Cpath%20d%3D%22M88%2017c8-3%2014%203%2024%200v3c-10%203-16-3-24%200zM88%2024c8-3%2014%203%2024%200v3c-10%203-16-3-24%200z%22%20fill%3D%22%23fff%22/%3E%3Cpath%20d%3D%22M88%2013c4-1.5%207-.5%2010%20.5v9c-3-1-6-2-10-.5z%22%20fill%3D%22%232b6cb0%22/%3E%3C/g%3E%3Cg%20fill%3D%22%23fefcbf%22%20opacity%3D%22.45%22%3E%3Cpath%20d%3D%22M66%2014l1%203%203%201-3%201-1%203-1-3-3-1%203-1z%22/%3E%3Cpath%20d%3D%22M74%2042l.8%202.2%202.2.8-2.2.8-.8%202.2-.8-2.2-2.2-.8%202.2-.8z%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #1a365d,#2a1a2e); } .cdi.cd-memorial .cdn { color: #fed7d7; }
+  .cdi.cd-labor { background: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%20120%2060%22%3E%3Ccircle%20cx%3D%22100%22%20cy%3D%2240%22%20r%3D%2212%22%20fill%3D%22%23fbd38d%22%20opacity%3D%22.35%22/%3E%3Cpath%20d%3D%22M62%2052h58%22%20stroke%3D%22%239ae6b4%22%20stroke-width%3D%222%22%20opacity%3D%22.4%22/%3E%3Cg%20opacity%3D%22.6%22%20transform%3D%22rotate%28-35%2098%2030%29%22%3E%3Crect%20x%3D%2296.5%22%20y%3D%2220%22%20width%3D%223%22%20height%3D%2226%22%20rx%3D%221.2%22%20fill%3D%22%23f6e05e%22/%3E%3Crect%20x%3D%2288%22%20y%3D%2216%22%20width%3D%2220%22%20height%3D%227%22%20rx%3D%221.5%22%20fill%3D%22%23cbd5e0%22/%3E%3C/g%3E%3C/svg%3E') right center / auto 100% no-repeat, linear-gradient(135deg, #2c5282,#1c4532); } .cdi.cd-labor .cdn { color: #fefcbf; }
 
   /* Christmas look (body.xc): starry midnight sky, gold accents, Star of Bethlehem + nativity scene */
   .timerow { display: flex; align-items: flex-start; }
@@ -1574,7 +1577,7 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) loadAlerts(); });
 
   /* ---------- Countdowns (card under the tiles) ---------- */
-  const CD_THEME = { "New Year's Day": "newyear", "Valentine's Day": "valentine", "Easter": "easter", "Mother's Day": "mom", "Father's Day": "dad", "Independence Day": "july4", "Thanksgiving": "thanks", "Christmas": "xmas" };
+  const CD_THEME = { "New Year's Day": "newyear", "Valentine's Day": "valentine", "Easter": "easter", "Mother's Day": "mom", "Father's Day": "dad", "Independence Day": "july4", "Thanksgiving": "thanks", "Christmas": "xmas", "Memorial Day": "memorial", "Labor Day": "labor" };
   const PARTY = `<span class="ic"><svg viewBox="0 0 64 64"><path d="M10 56 L26 14 L50 38Z" fill="#fbd38d"/><path d="M26 14 L50 38" stroke="#f687b3" stroke-width="4"/><circle cx="44" cy="12" r="3" fill="#90cdf4"/><circle cx="54" cy="24" r="2.5" fill="#90cdf4"/><circle cx="36" cy="6" r="2.5" fill="#68d391"/><circle cx="56" cy="8" r="2" fill="#f687b3"/></svg></span>`;
   function nthWeekday(y, m, dow, n) { const first = new Date(Date.UTC(y, m, 1)).getUTCDay(); return Date.UTC(y, m, 1 + ((dow - first + 7) % 7) + (n - 1) * 7); }
   function easterDay(y) { // Gregorian computus
@@ -1589,7 +1592,9 @@
       case "Valentine's Day": return Date.UTC(y, 1, 14);
       case "Easter": return easterDay(y);
       case "Mother's Day": return nthWeekday(y, 4, 0, 2);
+      case "Memorial Day": { const t = nthWeekday(y, 4, 1, 5); return new Date(t).getUTCMonth() === 4 ? t : t - 7 * 864e5; } // last Monday of May
       case "Father's Day": return nthWeekday(y, 5, 0, 3);
+      case "Labor Day": return nthWeekday(y, 8, 1, 1);
       case "Independence Day": return Date.UTC(y, 6, 4);
       case "Thanksgiving": return nthWeekday(y, 10, 4, 4);
       case "Christmas": return Date.UTC(y, 11, 25);
