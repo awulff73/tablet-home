@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-16c"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-21a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -881,9 +881,11 @@
   window.addEventListener("resize", () => { try { placeNightScene(); } catch (e) {} });
 
   /* ---------- Clock + night mode ---------- */
+  let tickDay = null; // the date last drawn, so the countdown card redraws right at midnight
   function tick() {
     const d = new Date();
     const tp = tzParts(d), h = tp.hour;
+    if (tickDay !== tp.day) { if (tickDay !== null) { try { renderCountdowns(); } catch (e) { console.error(e); } } tickDay = tp.day; }
     const ampm = h >= 12 ? "PM" : "AM";
     const h12 = h % 12 || 12;
     const m = two(tp.minute);
