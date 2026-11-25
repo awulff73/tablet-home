@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-25b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-25c"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -47,6 +47,9 @@
     // Heat banner: the highest "feels like" (heat index) in the coming daytime hours at or above "hot" (°F) = orange, "extreme" = red.
     // NWS Heat Advisory / Extreme Heat Watch or Warning also show it whenever issued. null = off.
     heat: { hot: 105, extreme: 110 },
+    // Winter weather banner: snow, sleet or freezing rain in the next "days" days of the forecast at this chance (%) or higher,
+    // plus NWS Winter Storm / Ice Storm / Blizzard warnings and watches and Winter Weather Advisories whenever issued. null = off.
+    winter: { chance: 30, days: 3 },
     // Air quality banner (purple) only when the US AQI reaches this level (101 = "unhealthy for sensitive groups"). null = off.
     airBanner: 101,
     // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
@@ -71,7 +74,8 @@
       locked: {"s":"GqigS3HaB19n5USF4geJJw==","i":"dKs3588ukVq6cabq","c":"7pCt5G86eLRHMGL03riZsvid9YW1AJeKxKZOh3P0Ge1om0tQfBiQ5mj67W6wa/5RQHgtb2QOLmO6Xp5rqcYHnB/0qCLmmjWN7eQIpQQpvGomRz1PcIo9yQ5O7edm74j+qa3X7Pp1xXjmv8RK4QZf+oLpS+gcSzjzpFCmtUszN+ST90b3g7I7K7uZmGGp79VikN011RE7SwiHwUrG2Otcdk5Flpe0sUj4iOEj3Ym8IJf0PzI/iTLI9xTI5zZ1+XnrwetNtJpHn/02hxg6ACu7zfUH6PaoeLSuB6j8n74qOw/ttsxGBcUy5PaxXhBSxMMn02X+rlpFeh9RrOrAnZtQuo6ZUMU/IccdkjVTLH7nQUr7Vuw3DrGjR9y8dL4xY5klfTSQUTV5Z6BBqiKLwFaZDkmuWcitdA+/lUbVdfwTQA9gAgm2shczRRBspuQoPt34wYejU86uuLMFjILBcTreVumABIpwbYr2SWx9RRbUFoyZ8vpdnkGOzWunR0AjaK+6V9zpqS6yP3Ki0V6XWIoM4R3YUAIgAyweY9bCIwSrkUNQlfedGLSQV4T2TXwK+8NgegwiqCwsUhGJWp8y1sMWq2XAh2JTFmIxjOBx8mit8yj5lJtmwPFI9sGOFBNM4Qw8tW55rdI2ERqUgDYS7koKoY/jZmj7VfZlBU+TPOeDKnmWeEpkq1EqMRpReGqerwv7pcqx1N76jUOEZC9KjLMIqlvtfCdIMEmEYAiWe5pltLf6b/k4e/0AzUjkYs7/ucXa5Pgu2hjAL6qe5wsw5DEqsOOMIaBlsiOPXbHABZI1kpZBoie7LGSzxT5SoS/EZg/gQylUwdFD9Bdztk4k7WL1fj4oRcwUj5oFypFO8inTp+/hKBl3uDHjEMd6ril+KOExQD1lHQAqviWhhFS30cDbZif5i1VZNfFiNh3V0TKyKbkF0BcX5xDYCyU4vQoGwXLft6DwM9U4T1ovLEhrpma0O7EHi+2dJZ559HFdYXtXTd1Mf31WI0BczlP+l1ZuZs0IbXqJbtYPhf041ZDOXRZxYM06N+sOhEQl69rrkfIUdoiwDAdCqxpyEb5tevtprc4CY7TZE2Okd7g3svorj6HccUKLiLqzw8UThC4RTYXn09Xi3Xxc4NHgttBWX40reVOxUzNAT3GhAXiOHU0WIQawHjTXYIWzVQPg2KpkftLGVwXXFJwOl6uPoTz0sZGzMo5uKhKeX4xqEy9dYruaMt2rgOKF2esaEegYeFdSjWFIYcsK41nMg01tYhMCwWQELmtAjB+e56C/N+iRuceiRf4t/l6tx2JqBJGjpl7HHDJYVKPD7M0A5FhbM8RthxLJTNAlo29rngG65qMI3WArfCkZZQbiEOPBSber/scJWpWXyv0HaHLyrQp5yTOwkSqxdT+ewbmTfLMHPL4sTXab8gtoGBS2SM9agFDnUN3tol4/iZDADsXbioud+10tKVi+lzkTwmrWDwV9lE/mxgxHL//XihqTwxymJiN/3brN61hKH3lI3KmuG79G+YmaU+iqwCtAxraax4QWtQDfX+ar71gB"}
     },
     // Christmas look: starry night sky; an Advent wreath beside the clock by day (one more candle each Advent Sunday, all lit on Christmas)
-    // and the Star of Bethlehem + nativity scene on the night view. From the day after Thanksgiving through Dec 26, on every screen. false = off.
+    // and the Star of Bethlehem + nativity scene on the night view. From the day after Thanksgiving through Epiphany (Jan 6), on every screen. false = off.
+    // After Christmas the label counts the 12 Days of Christmas (Jan 1 = "Happy New Year"); on Epiphany the star + nativity shows by day too.
     // Preview any time by adding ?theme=xmas to the page address (?theme=off forces it off).
     christmas: true,
     // Thanksgiving look: woodland dusk with rust and copper accents; a cornucopia beside the clock by day and a country church
@@ -231,6 +235,8 @@
   #nowTot { font-size: 2.2vmin; color: #8fa1b8; margin-top: 0.5vmin; }
   #nowTot:empty { display: none; }
   #trashBar { cursor: pointer; }
+  #winterBar { background: #0e7490; cursor: pointer; }                 /* snow / ice possible, winter weather advisory: teal */
+  #winterBar.warn { background: #075985; border-bottom-color: #fff; }  /* winter storm / ice storm / blizzard warning or watch: deep blue */
   #trashBar u { font-weight: 500; text-underline-offset: 0.3vmin; }
   .place { font-size: 2.2vmin; color: #7d8ea5; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.6vmin; }
   .hourly { display: flex; gap: 1vmin; margin-top: 1vmin; overflow: hidden; }
@@ -505,7 +511,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
-<div id="topBars"><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div><div class="bar" id="heatBar"></div></div>
+<div id="topBars"><div class="bar" id="winterBar"></div><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div><div class="bar" id="heatBar"></div></div>
 
 <div id="nightView">
   <div id="nvEmblem"></div>
@@ -835,21 +841,26 @@
     cs += candle(cx, cy + 1, 32, "#f5f5f4", christ);
     return `<svg viewBox="0 -2 120 72"><defs><radialGradient id="advGlow"><stop offset="0" stop-color="#fde68a" stop-opacity="0.55"/><stop offset="1" stop-color="#fde68a" stop-opacity="0"/></radialGradient></defs>${back}${cs}${front}${berries}</svg>`;
   }
-  // Which candles are lit today: one more each Advent Sunday (the 4th Sunday before Christmas is the first); all five on Dec 25–26
+  // Which candles are lit today: one more each Advent Sunday (the 4th Sunday before Christmas is the first); all five from Christmas Day.
+  // Christmas season: Dec 25 "Merry Christmas", then the 12 Days of Christmas (Jan 1 "Happy New Year"), Epiphany Jan 6 (star + nativity).
   function adventState(tp) {
+    if (tp.month === 1 && tp.day <= 6) {
+      if (tp.day === 6) return { lit: 4, christ: true, label: "Happy<br>Epiphany", art: "star" };
+      return { lit: 4, christ: true, label: tp.day === 1 ? "Happy<br>New Year" : `Day ${tp.day + 7} of<br>Christmas` };
+    }
     const today = Date.UTC(tp.year, tp.month - 1, tp.day), xmas = Date.UTC(tp.year, 11, 25), dow = new Date(xmas).getUTCDay();
     const adv4 = xmas - (dow === 0 ? 7 : dow) * 864e5, adv1 = adv4 - 21 * 864e5;
-    if (today >= xmas) return { lit: 4, christ: true, label: "Merry<br>Christmas" };
+    if (today >= xmas) { const n = Math.round((today - xmas) / 864e5) + 1; return { lit: 4, christ: true, label: n === 1 ? "Merry<br>Christmas" : `Day ${n} of<br>Christmas` }; }
     const lit = today < adv1 ? 0 : Math.min(4, Math.floor((today - adv1) / (7 * 864e5)) + 1);
     return { lit: lit, christ: false, label: lit ? `Week ${lit}<br>${["Hope", "Peace", "Joy", "Love"][lit - 1]}` : "Advent begins<br>" + (adv1 - today > 7 * 864e5 ? new Date(adv1).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "Sunday") };
   }
   let adventKey = "";
   const themeParam = (/[?&]theme=(\w+)/.exec(location.search) || [])[1];
   function renderAdvent(tp) {
-    const st = adventState(tp), key = st.lit + "|" + st.christ;
+    const st = adventState(tp), key = st.lit + "|" + st.christ + "|" + st.label;
     if (key === adventKey) return;
     adventKey = key;
-    $("xmasEmblem").innerHTML = `<div class="adv-art">${adventWreath(st.lit, st.christ)}</div><div class="adv-lb">${st.label}</div>`;
+    $("xmasEmblem").innerHTML = `<div class="adv-art">${st.art === "star" ? NATIVITY : adventWreath(st.lit, st.christ)}</div><div class="adv-lb">${st.label}</div>`;
   }
   // Shrink the label a little if the clock is wide (e.g. 12:58) and the words wouldn't fit under the wreath
   function fitAdventLabel() {
@@ -885,7 +896,8 @@
     if (themeParam === "off" || themeParam === "thanks" || !CONFIG.christmas) return false;
     const today = Date.UTC(tp.year, tp.month - 1, tp.day);
     const start = nthWeekday(tp.year, 10, 4, 4) + 864e5;            // day after Thanksgiving
-    return today >= start && today <= Date.UTC(tp.year, 11, 26);
+    if (tp.month === 1 && tp.day <= 6) return true;                  // the 12 Days of Christmas run through Epiphany (Jan 6)
+    return today >= start;
   }
   // Night view: make the scene as large as the open space allows without touching the clock, AM/PM or date
   function placeNightScene() {
@@ -1061,6 +1073,45 @@
     else if (RH > 85 && T >= 80 && T <= 87) HI += ((RH - 85) / 10) * ((87 - T) / 5);
     return HI;
   }
+  // Winter weather banner: NWS winter storm / ice alerts, or snow / ice in the next few days of the forecast
+  const winterOf = (ev) => /(winter storm|ice storm|blizzard|snow squall) warning/i.test(ev) ? 3 : /(winter storm|ice storm|blizzard) watch/i.test(ev) ? 2 : /winter weather advisory|freezing (rain|drizzle) advisory/i.test(ev) ? 1 : 0;
+  let winterDays = [], winterAlert = null, winterTap = null;
+  const escW = (x) => String(x || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); // (esc is defined further down)
+  function setWinterAlerts(feats) {
+    winterAlert = feats.filter(a => winterOf(a.event)).sort((a, b) => winterOf(b.event) - winterOf(a.event))[0] || null;
+    renderWinter();
+  }
+  function winterKind(text) {
+    const s = (text || "").toLowerCase();
+    if (/freezing rain|freezing drizzle|sleet|ice pellets|wintry mix|\bice\b/.test(s)) return "ice";
+    if (/snow|blizzard/.test(s)) return "snow";
+    if (/flurr/.test(s)) return "flurries";
+    return "";
+  }
+  function renderWinter() {
+    const W = CONFIG.winter, bar = $("winterBar");
+    winterTap = null;
+    if (!W) { setBar(bar, ""); return; }
+    if (winterAlert) {
+      const a = winterAlert, until = a.ends || a.expires;
+      bar.className = "bar" + (winterOf(a.event) >= 2 ? " warn" : "");
+      winterTap = () => showAlertDetail([a]);
+      setBar(bar, `${SNOWFLAKE}${escW(a.event.toUpperCase())}${until ? " UNTIL " + new Date(until).toLocaleString("en-US", { weekday: "short", hour: "numeric", timeZone: TZ }).toUpperCase() : ""} · <u>tap for what to do</u>`);
+      return;
+    }
+    const chance = (p) => (p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value) || 0;
+    const p = winterDays.slice(0, (W.days || 3) * 2).filter(x => winterKind(x.shortForecast) && chance(x) >= W.chance)[0];
+    if (!p) { setBar(bar, ""); return; }
+    const kind = winterKind(p.shortForecast), likely = chance(p) >= 60;
+    const when = /^(Today|This Afternoon|This Morning)$/i.test(p.name) ? "TODAY" : /^(Tonight|Overnight)$/i.test(p.name) ? "TONIGHT" : p.name.toUpperCase();
+    const what = kind === "ice" ? "ICE" : kind === "snow" ? "SNOW" : "FLURRIES";
+    const tip = kind === "flurries" ? "little or no accumulation expected" : kind === "ice" ? "roads, steps and power lines could ice over" : "roads may be slick — check before driving";
+    bar.className = "bar";
+    winterTap = () => { const i = weekDays.findIndex(d => d.day === p || d.night === p); if (i >= 0) showDay(i); };
+    setBar(bar, `${SNOWFLAKE}${what} ${likely ? "LIKELY" : "POSSIBLE"} ${escW(when)} · ${chance(p)}% · ${tip} · <u>tap for details</u>`);
+  }
+  $("winterBar").addEventListener("click", () => { if (winterTap) winterTap(); });
+
   const heatOf = (ev) => /(extreme|excessive) heat warning/i.test(ev) ? 3 : /(extreme|excessive) heat watch/i.test(ev) ? 2 : /heat advisory/i.test(ev) ? 1 : 0;
   let heatHours = [], heatAlert = null;
   function setHeatAlerts(feats) {
@@ -1223,6 +1274,7 @@
     renderWeek(daily);
     showFreeze(daily);
     heatHours = hours; renderHeat();
+    winterDays = daily; renderWinter();
     nightW = w; renderNightWx();
     $("updated").textContent = "Weather updated " + fmtTime(new Date(w.at), { hour: "numeric", minute: "2-digit" }) + (w.src === "om" ? " · backup forecast (Open-Meteo) — weather service forecast is down" : "") + " · v" + VERSION;
     return true;
@@ -1408,7 +1460,7 @@
     const dateTxt = isNaN(dt) ? "" : dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: TZ });
     const part = (p, label) => {
       if (!p) return "";
-      const rain = p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value ? `<span>${p.probabilityOfPrecipitation.value}% chance of rain</span>` : "";
+      const rain = p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value ? `<span>${p.probabilityOfPrecipitation.value}% chance of ${({ ice: "ice", snow: "snow", flurries: "snow" })[winterKind(p.shortForecast)] || "rain"}</span>` : "";
       return `<div class="dd-part">${icon(p.shortForecast, p.isDaytime, p.startTime)}<div>
         <div class="dd-label">${esc(label)}</div>
         <div class="dd-temp">${p.isDaytime ? "High" : "Low"} ${p.temperature}°${rain}</div>
@@ -1592,8 +1644,9 @@
       next = handleSevere(feats);
       setColdAlerts(feats);
       setHeatAlerts(feats);
+      setWinterAlerts(feats);
       markAlertOk();
-      const box = $("alerts"), listed = feats.filter(a => !coldOf(a.event) && !(CONFIG.heat && heatOf(a.event))); // frost/freeze and heat alerts show as top banners instead
+      const box = $("alerts"), listed = feats.filter(a => !coldOf(a.event) && !(CONFIG.heat && heatOf(a.event)) && !(CONFIG.winter && winterOf(a.event))); // frost/freeze, heat and winter storm alerts show as top banners instead
       if (!listed.length) { box.style.display = "none"; box.innerHTML = ""; }
       else {
       box.style.display = "block";
@@ -1801,6 +1854,29 @@
     if (navigator.onLine !== false && Date.now() - lastOk < 10 * 60 * 1000) location.reload();
     else setTimeout(refresh, 10 * 60 * 1000);
   }, 6 * 60 * 60 * 1000);
+
+  // Auto-update: every 30 minutes, check whether a newer version of this page has been published (its VERSION line changed).
+  // If so, reload to pick it up — but never during a storm warning, or while a panel, the radar or the passcode box is open (try again in 5 min).
+  const UPDATE_EVERY = 30 * 60 * 1000;
+  function checkForUpdate() {
+    if (location.protocol === "file:") return;
+    fetch(location.pathname + "?update=" + Date.now(), { cache: "no-store" })
+      .then((r) => r.ok ? r.text() : "")
+      .then((html) => {
+        const m = /const VERSION = "([^"]+)"/.exec(html || "");
+        if (!m || m[1] === VERSION) { setTimeout(checkForUpdate, UPDATE_EVERY); return; }
+        const busy = severeActive || document.body.classList.contains("severe-on") ||
+          document.querySelector("#radar.open, #dayDetail.open, #hrDetail.open, #sevDetail.open, #cdDetail.open") ||
+          (document.activeElement && document.activeElement.tagName === "INPUT");
+        // Don't keep reloading if the browser is still handing back the old copy: one try per new version every 20 minutes
+        const tried = store.get("update_tried") || {};
+        if (busy || (tried.v === m[1] && Date.now() - tried.t < 20 * 60 * 1000)) { setTimeout(checkForUpdate, 5 * 60 * 1000); return; }
+        store.set("update_tried", { v: m[1], t: Date.now() });
+        location.reload();
+      })
+      .catch(() => setTimeout(checkForUpdate, UPDATE_EVERY)); // offline: just try again later
+  }
+  setTimeout(checkForUpdate, UPDATE_EVERY);
 })();
 </script>
 </body>
