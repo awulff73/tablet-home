@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-25e"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-25f"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -1711,13 +1711,13 @@
     opts = opts || {};
     const ahead = opts.daysAhead || C.daysAhead || 60;
     const p = tzParts(new Date()), today = Date.UTC(p.year, p.month - 1, p.day), list = [];
-    const add = (name, t, theme, what) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= ahead) list.push({ name: name, t: t, d: d, theme: theme, what: what }); };
+    const add = (name, t, theme, what, since) => { const d = Math.round((t - today) / 864e5); if (d >= 0 && d <= ahead) list.push({ name: name, t: t, d: d, theme: theme, what: what, since: since }); };
     [p.year, p.year + 1].forEach((y) => {
       (C.holidays || []).forEach((h) => { const t = holidayDay(h, y); if (t !== null) add(h, t, CD_THEME[h] || "event"); });
       (C.events || []).forEach((e) => {
         const m = /^(?:(\d{4})-)?(\d{1,2})-(\d{1,2})$/.exec(e.date || "");
         if (!m || (m[1] && +m[1] !== y)) return;
-        add(e.name, Date.UTC(y, +m[2] - 1, +m[3]), e.theme || "event", e.what);
+        add(e.name, Date.UTC(y, +m[2] - 1, +m[3]), e.theme || "event", e.what, e.since);
       });
     });
     list.sort((a, b) => a.d - b.d);
@@ -1753,7 +1753,7 @@
       month = m;
       const when = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" });
       const big = it.d === 0 ? PARTY : `${it.d}<small>${it.d === 1 ? "day" : "days"}</small>`;
-      return `${head}<div class="cdi cda cd-${it.theme}${it.d === 0 ? " today" : ""}"><div class="cdn">${big}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${it.what && it.what !== "Birthday" ? esc(it.what) + " · " : ""}${it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow · " + when : when}</div></div></div>`;
+      return `${head}<div class="cdi cda cd-${it.theme}${it.d === 0 ? " today" : ""}"><div class="cdn">${big}</div><div class="cdt"><div class="cdl">${esc(it.name)}</div><div class="cdd">${it.since && new Date(it.t).getUTCFullYear() > it.since ? ordinal(new Date(it.t).getUTCFullYear() - it.since).toLowerCase() + " " + esc((it.what || "anniversary").toLowerCase()) + " · " : it.what && it.what !== "Birthday" ? esc(it.what) + " · " : ""}${it.d === 0 ? "Today!" : it.d === 1 ? "Tomorrow · " + when : when}</div></div></div>`;
     }).join("") || `<div class="muted">Nothing on the calendar in the next 12 months.</div>`;
     $("cdCard").innerHTML = `<div class="dd-head"><div class="dd-title">Coming up this year</div><button class="rbtn close" id="cdClose">&times; Close</button></div><div class="cda-list">${html}</div>`;
     $("cdDetail").classList.add("open");
