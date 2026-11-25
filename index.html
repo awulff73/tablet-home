@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-25a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-25b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -55,8 +55,8 @@
       { label: "Trash", day: "Wed", holidayDelay: ["Mon", "Tue", "Wed"] },
       { label: "Recycling", day: "Fri", nth: 2, holidayDelay: ["Mon", "Tue", "Wed", "Thu", "Fri"] }
     ],
-    // National holidays that delay pickup (remove any your hauler works through)
-    holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Columbus Day", "Veterans Day", "Thanksgiving", "Christmas"],
+    // National holidays that delay pickup — matches the Madison County garbage calendar (2024–2026): every federal holiday except Columbus Day
+    holidays: ["New Year's Day", "MLK Day", "Presidents Day", "Memorial Day", "Juneteenth", "Independence Day", "Labor Day", "Veterans Day", "Thanksgiving", "Christmas"],
     pickupRemind: { eveningFrom: 16, morningUntil: 10 },
     // Countdown card under the tiles: the next few holidays and family events within daysAhead days.
     // Holidays (calculated automatically): New Year's Day, Valentine's Day, Easter, Mother's Day, Memorial Day, Father's Day, Independence Day, Labor Day, Thanksgiving, Christmas.
