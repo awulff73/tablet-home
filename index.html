@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-21b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-25a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -39,10 +39,11 @@
     brightness: { day: 200, evening: 110, night: 35 },
     // Cold banner: next night's low at or below "light" (°F) = freeze, at or below "hard" = hard freeze.
     // These plant warnings only show in the "seasons" (MM-DD ranges: spring and fall), not all winter.
+    // "winterHard": true = outside those seasons, a low at or below "hard" still shows the hard-freeze banner (drip faucets, cover spigots) — no plant warnings.
     // "pipes": any time of year, a low at or below this shows a very-cold banner to protect pipes (set to null to turn off).
     // NWS Frost Advisory (light blue), Freeze Watch/Warning (blue), Hard Freeze Watch/Warning (dark blue) also show it whenever NWS issues them.
     // "frost": true = in those seasons, also a light-blue frost banner when the next night's forecast mentions frost (e.g. "Areas Of Frost") but isn't a freeze.
-    freeze: { light: 32, hard: 28, seasons: [["03-01", "05-15"], ["10-01", "11-30"]], pipes: 20, frost: true },
+    freeze: { light: 32, hard: 28, seasons: [["03-01", "05-15"], ["10-01", "11-30"]], pipes: 20, frost: true, winterHard: true },
     // Heat banner: the highest "feels like" (heat index) in the coming daytime hours at or above "hot" (°F) = orange, "extreme" = red.
     // NWS Heat Advisory / Extreme Heat Watch or Warning also show it whenever issued. null = off.
     heat: { hot: 105, extreme: 110 },
@@ -785,7 +786,7 @@
       right = `<div class="nv-label">${afterMidnight ? "Today" : "Tomorrow"}</div><div class="nv-temp">${icon(dd.shortForecast, true, dd.startTime)}${dd.temperature}°${nn ? ` <span>/ ${nn.temperature}°</span>` : ""}</div><div class="nv-text">${dd.shortForecast}${extra}</div>`;
     }
     const html = `<div>${left}</div><div>${right}</div>`;
-    if (html !== nightWxHtml) { nightWxHtml = html; $("nvWx").innerHTML = html; }
+    if (html !== nightWxHtml) { nightWxHtml = html; $("nvWx").innerHTML = html; try { placeNightScene(); } catch (e) {} } // re-fit the night picture right away
   }
 
   /* ---------- Christmas look: day after Thanksgiving through Dec 26 ---------- */
@@ -840,7 +841,7 @@
     const adv4 = xmas - (dow === 0 ? 7 : dow) * 864e5, adv1 = adv4 - 21 * 864e5;
     if (today >= xmas) return { lit: 4, christ: true, label: "Merry<br>Christmas" };
     const lit = today < adv1 ? 0 : Math.min(4, Math.floor((today - adv1) / (7 * 864e5)) + 1);
-    return { lit: lit, christ: false, label: lit ? `Week ${lit}<br>${["Hope", "Peace", "Joy", "Love"][lit - 1]}` : "Advent begins<br>Sunday" };
+    return { lit: lit, christ: false, label: lit ? `Week ${lit}<br>${["Hope", "Peace", "Joy", "Love"][lit - 1]}` : "Advent begins<br>" + (adv1 - today > 7 * 864e5 ? new Date(adv1).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }) : "Sunday") };
   }
   let adventKey = "";
   const themeParam = (/[?&]theme=(\w+)/.exec(location.search) || [])[1];
@@ -1033,6 +1034,7 @@
     let fc = "";
     if (n && inFreezeSeason()) fc = n.temperature <= F.hard ? "hard" : n.temperature <= F.light ? "freeze" : (F.frost && /frost/i.test(n.shortForecast || "")) ? "frost" : "";
     if (!fc && n && F.pipes != null && n.temperature <= F.pipes) fc = "pipes"; // deep cold, any season
+    if (!fc && n && F.winterHard && n.temperature <= F.hard) fc = "hard";      // winter: spigot warning only, no plant warnings
     const al = coldAlert ? coldOf(coldAlert.event) : "";
     const level = (COLD[al] || 0) >= (COLD[fc] || 0) ? al : fc;
     if (!level) { setBar(bar, ""); return; }
@@ -1116,6 +1118,7 @@
     document.body.classList.toggle("bars-many", on && [...$("topBars").children].filter(e => e.style.display === "block").length >= 2);
     $("wrap").style.paddingTop = on ? `calc(${h}px + 2.2vmin)` : "";
     $("nightView").style.paddingTop = on ? `calc(${h}px + 3vmin)` : "";
+    try { placeNightScene(); } catch (e) {} // a banner moved things: re-fit the night picture now, not at the next clock tick
   }
   window.addEventListener("resize", layoutBars);
 
