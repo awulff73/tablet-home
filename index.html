@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-25c"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-25d"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -50,6 +50,11 @@
     // Winter weather banner: snow, sleet or freezing rain in the next "days" days of the forecast at this chance (%) or higher,
     // plus NWS Winter Storm / Ice Storm / Blizzard warnings and watches and Winter Weather Advisories whenever issued. null = off.
     winter: { chance: 30, days: 3 },
+    // Clock-change banner: the day before daylight saving time starts or ends ("CLOCKS FALL BACK TONIGHT") and the next morning until noon. false = off.
+    clockChange: true,
+    // Family birthday / anniversary / graduation banner across the top on the day itself (uses the locked family dates). Tap it to hide it for the day. false = off.
+    // An anniversary with "since": YYYY in the locked list also shows the years ("30 YEARS").
+    celebrate: true,
     // Air quality banner (purple) only when the US AQI reaches this level (101 = "unhealthy for sensitive groups"). null = off.
     airBanner: 101,
     // Trash/recycling reminder, shown from 4 PM the day before until 10 AM pickup day.
@@ -236,6 +241,10 @@
   #nowTot:empty { display: none; }
   #trashBar { cursor: pointer; }
   #winterBar { background: #0e7490; cursor: pointer; }                 /* snow / ice possible, winter weather advisory: teal */
+  #dstBar { background: #3730a3; }                                   /* clock change: indigo */
+  #celebrateBar { background: linear-gradient(90deg, #a16207, #ca8a04, #a16207); cursor: pointer; border-bottom-color: #fde68a; } /* birthday: gold */
+  #celebrateBar.anniv { background: linear-gradient(90deg, #9d174d, #be185d, #9d174d); color: #fff; border-bottom-color: #fbcfe8; } /* anniversary: rose */
+  #celebrateBar u { font-weight: 500; }
   #winterBar.warn { background: #075985; border-bottom-color: #fff; }  /* winter storm / ice storm / blizzard warning or watch: deep blue */
   #trashBar u { font-weight: 500; text-underline-offset: 0.3vmin; }
   .place { font-size: 2.2vmin; color: #7d8ea5; text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 0.6vmin; }
@@ -511,7 +520,7 @@
 </div>
 <div id="updated"></div>
 <div id="severe"></div>
-<div id="topBars"><div class="bar" id="winterBar"></div><div class="bar" id="freezeBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div><div class="bar" id="heatBar"></div></div>
+<div id="topBars"><div class="bar" id="winterBar"></div><div class="bar" id="freezeBar"></div><div class="bar" id="dstBar"></div><div class="bar" id="trashBar"></div><div class="bar" id="netBar"></div><div class="bar" id="powerBar"></div><div class="bar" id="airBar"></div><div class="bar" id="heatBar"></div><div class="bar" id="celebrateBar"></div></div>
 
 <div id="nightView">
   <div id="nvEmblem"></div>
@@ -1770,6 +1779,7 @@
     try {
       const evs = await cdDecrypt(pass);
       CONFIG.countdowns.events = evs; cdUnlocked = true; cdHtml = null;
+      try { updateCelebrate(); } catch (e) {}
       try { localStorage.setItem(CD_PASS, pass); } catch (e) {}
       renderCountdowns();
       if (fromUser) { toast("Family dates unlocked on this screen"); showAllCountdowns(); }
@@ -1839,11 +1849,58 @@
   setTimeout(loadAir, 400);
   setInterval(loadAir, 30 * 60 * 1000); // every 30 min
 
+  /* ---------- Clock-change banner (daylight saving time, US rules) ---------- */
+  const CLOCK = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><circle cx="32" cy="34" r="22"/><path d="M32 22V34L40 40"/><path d="M10 12L18 6M54 12L46 6"/></g></svg></span>`;
+  function dstText() {
+    if (!CONFIG.clockChange) return "";
+    const p = tzParts(new Date()), today = Date.UTC(p.year, p.month - 1, p.day);
+    const spring = nthWeekday(p.year, 2, 0, 2), fall = nthWeekday(p.year, 10, 0, 1); // 2nd Sunday of March, 1st Sunday of November
+    if (today === spring - 864e5) return `${CLOCK}CLOCKS SPRING FORWARD TONIGHT · set clocks ahead 1 hour at 2 AM · an hour less sleep`;
+    if (today === fall - 864e5) return `${CLOCK}CLOCKS FALL BACK TONIGHT · set clocks back 1 hour at 2 AM · an extra hour of sleep`;
+    if ((today === spring || today === fall) && p.hour < 12) return `${CLOCK}CLOCKS ${today === spring ? "SPRANG FORWARD" : "FELL BACK"} LAST NIGHT · check the car, oven and microwave clocks`;
+    return "";
+  }
+  function updateDst() { setBar($("dstBar"), dstText()); }
+
+  /* ---------- Birthday / anniversary banner (family dates, on the day) ---------- */
+  const CAKE = `<span class="ic"><svg viewBox="0 0 64 64"><g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 56H54V36H10Z"/><path d="M10 45c5 4 9 4 11 0 3 4 8 4 11 0 3 4 8 4 11 0 2 4 6 4 11 0"/><path d="M22 36V28M32 36V26M42 36V28"/></g><g fill="currentColor"><path d="M22 23c-2-3 0-6 0-8 2 3 3 5 0 8Z"/><path d="M32 21c-2-3 0-6 0-8 2 3 3 5 0 8Z"/><path d="M42 23c-2-3 0-6 0-8 2 3 3 5 0 8Z"/></g></svg></span>`;
+  const HEART = `<span class="ic"><svg viewBox="0 0 64 64"><path d="M32 54C14 42 6 32 6 22a13 13 0 0 1 26-4 13 13 0 0 1 26 4c0 10-8 20-26 32Z" fill="currentColor"/></svg></span>`;
+  const ordinal = (n) => n + ([, "ST", "ND", "RD"][(n % 100 - 20) % 10] || [, "ST", "ND", "RD"][n % 100] || "TH");
+  let celebrateDay = 0;
+  function celebrateText() {
+    if (!CONFIG.celebrate || !CONFIG.countdowns) return { html: "" };
+    const p = tzParts(new Date()), md = two(p.month) + "-" + two(p.day), ymd = p.year + "-" + md;
+    celebrateDay = Date.UTC(p.year, p.month - 1, p.day);
+    if (store.get("celebrate_done") === celebrateDay) return { html: "" }; // tapped to hide for today
+    const today = (CONFIG.countdowns.events || []).filter(e => e.date === md || e.date === ymd || e.date === p.year + "-" + p.month + "-" + p.day);
+    if (!today.length) return { html: "" };
+    const first = (name) => String(name || "").replace(/'s (birthday|graduation)$/i, "");
+    const parts = today.map((e) => {
+      const what = (e.what || "").toLowerCase(), th = e.theme || "";
+      if (what === "anniversary" || th === "anniv") {
+        const yrs = e.since ? p.year - e.since : 0;
+        return "HAPPY " + (yrs > 0 ? ordinal(yrs) + " " : "") + "ANNIVERSARY, " + esc(e.name).toUpperCase() + "!";
+      }
+      if (what === "birthday" || th === "bday") return "HAPPY BIRTHDAY, " + esc(first(e.name)).toUpperCase() + "!";
+      if (what === "graduation" || th === "grad") return "CONGRATULATIONS, " + esc(first(e.name)).toUpperCase() + " · GRADUATION DAY!";
+      return "TODAY: " + esc(e.name).toUpperCase();
+    });
+    const anniv = today.every(e => (e.what || "").toLowerCase() === "anniversary" || e.theme === "anniv");
+    return { html: `${anniv ? HEART : CAKE}${parts.join(" · ")} · <u>tap to hide</u>`, anniv: anniv };
+  }
+  function updateCelebrate() {
+    const c = celebrateText(), bar = $("celebrateBar");
+    bar.className = "bar" + (c.anniv ? " anniv" : "");
+    setBar(bar, c.html);
+  }
+  $("celebrateBar").addEventListener("click", () => { store.set("celebrate_done", celebrateDay); updateCelebrate(); });
+
   /* ---------- Periodic checks ---------- */
   renderExtras();
   updateTrash();
+  try { updateDst(); updateCelebrate(); } catch (e) { console.error(e); }
   checkPower();
-  setInterval(() => { updateTrash(); checkNet(); checkPower(); alertWatchdog(); }, 60 * 1000);
+  setInterval(() => { updateTrash(); checkNet(); checkPower(); alertWatchdog(); try { updateDst(); updateCelebrate(); } catch (e) { console.error(e); } }, 60 * 1000);
 
 
   setTimeout(loadWeather, 50); // let the clock and tiles paint first
