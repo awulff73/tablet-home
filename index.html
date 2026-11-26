@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-26a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-26b"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -1846,7 +1846,7 @@
       return `<div class="sc-lock"><div>Locked on this screen.<br>Enter the family passcode.</div><input id="scPass" type="password" autocomplete="off" placeholder="Passcode"><button class="rbtn" id="scGo">Unlock</button></div>`;
     }
     const qr = w.qr ? `<div class="sc-qr"><svg viewBox="-1 -1 ${w.qr.n + 2} ${w.qr.n + 2}" shape-rendering="crispEdges"><path d="${w.qr.p}" fill="#000"/></svg></div>` : "";
-    return `${qr}<div class="sc-row">Network<b>${esc(w.ssid)}</b></div><div class="sc-row">Password<b>${esc(w.pass)}</b></div><div class="sc-tip">Point a phone camera at the code to join</div>`;
+    return `${qr}<div class="sc-row">Network<b>${esc(w.ssid)}</b></div><div class="sc-row">Password<b id="scPw" class="sc-hid">••••••••</b><button class="rbtn sc-link" id="scShow">Show password</button></div><div class="sc-tip">Point a phone camera at the code to join</div>`;
   }
   function renderSecret() {
     const teams = (SC && SC.teams) || [];
@@ -1854,6 +1854,13 @@
       <div class="sc-grid"><div><div class="sc-h">Guest Wi-Fi</div><div class="sc-wifi">${wifiHtml()}</div></div>
       <div><div class="sc-h">Our teams</div><div id="scTeams">${teams.map((t, i) => `<div class="sc-team"><div class="sc-bar" style="background:${t.color || "#4b5563"}"></div><div class="sc-body" id="scT${i}">${teamHtml(t, i)}</div></div>`).join("")}</div><div class="sc-upd" id="scUpd"></div></div></div>`;
     $("scClose").onclick = closeSecret;
+    const sh = $("scShow");
+    if (sh) sh.onclick = () => {   // password stays hidden until tapped (hidden again each time the page opens)
+      const pw = $("scPw"), show = pw.classList.contains("sc-hid");
+      pw.textContent = show ? secretData.wifi.pass : "••••••••";
+      pw.classList.toggle("sc-hid", !show);
+      sh.textContent = show ? "Hide password" : "Show password";
+    };
     const go = $("scGo");
     if (go) {
       const f = () => { const v = $("scPass").value.trim(); if (v) secretTry(v, true); };
