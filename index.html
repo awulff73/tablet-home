@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-25h"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-26a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -97,7 +97,19 @@
       { label: "Cameras",       sub: "Wyze live view",          icon: "camera", url: "https://my.wyze.com/live",   color: "#2f855a", chrome: true },
       { label: "Thermostat",    sub: "ecobee",                  icon: "thermo", url: "https://www.ecobee.com/login/", color: "#b7791f" },
       { label: "Water",         sub: "Flume",                   icon: "water",  url: "https://portal.flumewater.com/", color: "#0e7490" }
-    ]
+    ],
+    // Secret page: tap the moon (under the clock) 3 times quickly. Shows guest Wi-Fi (locked with the family-dates passcode) and sports.
+    // Teams with espn: live scores from ESPN (sport path + team id). Teams without it: type games in by hand, e.g.
+    //   games: [{ date: "2027-03-06", time: "2 PM", opp: "vs UT Arlington", result: "W 28-14" }]  (result only after the game)
+    secret: {
+      taps: 3,
+      teams: [
+        { name: "Alabama", sub: "Crimson Tide football", espn: "football/college-football", id: 333, color: "#9e1b32" },
+        { name: "Kansas City Chiefs", sub: "NFL", espn: "football/nfl", id: 12, color: "#e31837" },
+        { name: "UNA Lions", sub: "Women's flag football", color: "#46166b", note: "First season: spring 2027 · schedule not posted yet", link: "https://roarlions.com/sports/womens-flag-football/schedule", games: [] }
+      ],
+      locked: {"n":600000,"s":"J2z4za2daDxNkKglIeELJA==","i":"oWQ61VCBNsv7CYP8","c":"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"}
+    }
   };
 </script>
 <style>
@@ -403,6 +415,34 @@
   #cd:active { transform: scale(0.985); }
   #cdDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 55; display: none; background: rgba(4,7,12,0.82); align-items: center; justify-content: center; padding: 4vmin; }
   #cdDetail.open { display: flex; }
+  /* Secret page (tap the moon 3 times) */
+  #sun .si.moon { cursor: default; padding: 0.6vmin 1vmin; margin: -0.6vmin -1vmin; }
+  #secretDetail { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 56; display: none; background: rgba(4,7,12,0.86); align-items: center; justify-content: center; padding: 3vmin; }
+  #secretDetail.open { display: flex; }
+  .sc-card { width: 94vw; width: min(94vw, 170vmin); }
+  .sc-grid { display: grid; grid-template-columns: 0.9fr 1.3fr; grid-gap: 3vmin; gap: 3vmin; }
+  .sc-h { font-size: 2.2vmin; letter-spacing: 0.12em; text-transform: uppercase; color: #8fa1b8; margin-bottom: 1.2vmin; }
+  .sc-wifi { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 2vmin; padding: 2.4vmin; text-align: center; }
+  .sc-qr { background: #fff; border-radius: 1.6vmin; padding: 1.6vmin; width: 34vmin; height: 34vmin; margin: 0 auto 1.8vmin; }
+  .sc-qr svg { width: 100%; height: 100%; display: block; }
+  .sc-row { font-size: 2.4vmin; color: #8fa1b8; margin-top: 1vmin; }
+  .sc-row b { display: block; font-size: 4vmin; color: #fff; font-weight: 650; letter-spacing: 0.02em; margin-top: 0.2vmin; font-family: ui-monospace, "Roboto Mono", Menlo, monospace; }
+  .sc-tip { font-size: 2vmin; color: #8fa1b8; margin-top: 1.4vmin; }
+  .sc-lock { display: flex; flex-direction: column; align-items: center; gap: 1.6vmin; padding: 4vmin 1vmin; font-size: 2.5vmin; color: #cbd5e1; }
+  #scPass { font-size: 2.8vmin; padding: 1.2vmin 1.6vmin; border-radius: 1.2vmin; border: 1px solid #4b5563; background: #0f172a; color: #fff; width: 36vmin; }
+  .sc-team { display: flex; align-items: stretch; border-radius: 1.8vmin; overflow: hidden; margin-bottom: 1.6vmin; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
+  .sc-bar { width: 1.2vmin; flex: none; }
+  .sc-body { flex: 1; min-width: 0; padding: 1.6vmin 2vmin; }
+  .sc-name { font-size: 3vmin; font-weight: 700; }
+  .sc-name small { font-size: 2vmin; font-weight: 500; color: #8fa1b8; margin-left: 1vmin; }
+  .sc-line { font-size: 2.4vmin; color: #dbe4ef; margin-top: 0.7vmin; line-height: 1.3; }
+  .sc-line .lb { display: inline-block; min-width: 9vmin; font-size: 1.9vmin; letter-spacing: 0.1em; text-transform: uppercase; color: #8fa1b8; }
+  .sc-line.live { color: #fde68a; font-weight: 700; }
+  .sc-line.live .lb { color: #f87171; }
+  .sc-w { color: #86efac; font-weight: 700; } .sc-l { color: #fca5a5; font-weight: 700; }
+  .sc-link { font-size: 2vmin; margin-top: 1vmin; padding: 0.8vmin 1.8vmin; display: inline-block; }
+  .sc-upd { font-size: 1.8vmin; color: #6b7a90; text-align: right; }
+  @media (orientation: portrait) { .sc-grid { grid-template-columns: 1fr; } .sc-qr { width: 40vmin; height: 40vmin; } }
   .cd-lock { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 1.6vmin; margin-bottom: 1vmin; padding: 2vmin; border: 1px dashed #4b5563; border-radius: 1.6vmin; color: #cbd5e1; font-size: 2.4vmin; }
   .cd-lock-t { flex: 1 1 100%; }
   #cdPass { font-size: 2.8vmin; padding: 1.2vmin 1.6vmin; border-radius: 1.2vmin; border: 1px solid #4b5563; background: #0f172a; color: #fff; width: 30vmin; }
@@ -536,6 +576,7 @@
 <div id="hrDetail"><div class="dd-card hr-card" id="hrCard"></div></div>
 <div id="sevDetail"><div class="dd-card sd-card" id="sdCard"></div></div>
 <div id="cdDetail"><div class="dd-card cda-card" id="cdCard"></div></div>
+<div id="secretDetail"><div class="dd-card sc-card" id="scCard"></div></div>
 
 <div id="radar">
   <div class="radar-bar">
@@ -742,7 +783,7 @@
     $("sun").innerHTML =
       `<div class="si ${now > sun.rise ? "past" : ""}">${ICONS.sunrise()} Sunrise <b>${t(sun.rise)}</b></div>` +
       `<div class="si ${now > sun.set ? "past" : ""}">${ICONS.sunset()} Sunset <b>${t(sun.set)}</b></div>` +
-      `<div class="si">${ICONS.moon(moonAge(d))} <b>${MOON_NAMES[moonIndex(d)]}</b></div>`;
+      `<div class="si moon">${ICONS.moon(moonAge(d))} <b>${MOON_NAMES[moonIndex(d)]}</b></div>`;
   }
 
   /* ---------- Night view (big dim clock, tonight/tomorrow, tiles) ---------- */
@@ -1580,8 +1621,8 @@
     // after that, only every 5 minutes, so you can stay on the cameras.
     const newIssue = isNew.length > 0;
     const front = newIssue || Date.now() - lastFront >= FRONT_EVERY;
-    if (keepOn.length) { closeDay(); closeHours(); wakeScreen(front); openRadar(); }   // warnings: keep the screen on and radar open
-    else if (isNew.length) { closeDay(); closeHours(); wakeScreen(true); openRadar(); } // watches: wake once when issued
+    if (keepOn.length) { closeDay(); closeHours(); closeSecret(); wakeScreen(front); openRadar(); }   // warnings: keep the screen on and radar open
+    else if (isNew.length) { closeDay(); closeHours(); closeSecret(); wakeScreen(true); openRadar(); } // watches: wake once when issued
     return keepOn.length ? 60 * 1000 : 2 * 60 * 1000;        // check more often during a watch or warning
   }
 
@@ -1764,11 +1805,152 @@
   $("cd").addEventListener("click", showAllCountdowns);
   $("cdDetail").addEventListener("click", (e) => { if (e.target.id === "cdDetail") closeAllCountdowns(); });
 
+  /* ---------- Secret page: tap the moon 3 times. Guest Wi-Fi (locked) + sports scores ---------- */
+  let secretData = null, scTaps = [], scTimer = null, scRefresh = null;
+  const SC = CONFIG.secret || null;
+  async function secretTry(pass, fromUser) {
+    if (!SC || !SC.locked) return false;
+    try {
+      secretData = await decryptLocked(SC.locked, pass);
+      try { localStorage.setItem(CD_PASS, pass); } catch (e) {}
+      if (fromUser && !cdUnlocked) cdTryUnlock(pass, false);   // same passcode also unlocks the family dates
+      if ($("secretDetail").classList.contains("open")) renderSecret();
+      return true;
+    } catch (e) {
+      if (fromUser) toast(window.crypto && crypto.subtle ? "That passcode didn't work" : "This browser can't unlock it");
+      return false;
+    }
+  }
+  // Three quick taps on the moon (within 2 seconds)
+  $("sun").addEventListener("click", (e) => {
+    if (!SC || !e.target.closest || !e.target.closest(".si.moon")) return;
+    const now = Date.now();
+    scTaps = scTaps.filter(t => now - t < 2000); scTaps.push(now);
+    if (scTaps.length >= (SC.taps || 3)) { scTaps = []; openSecret(); }
+  });
+  function openSecret() {
+    renderSecret();
+    $("secretDetail").classList.add("open");
+    $("scCard").scrollTop = 0;
+    loadSports(false);
+    clearInterval(scRefresh); scRefresh = setInterval(() => loadSports(false), 60 * 1000); // live games refresh every minute
+    bumpSecret();
+  }
+  function bumpSecret() { clearTimeout(scTimer); scTimer = setTimeout(closeSecret, 3 * 60 * 1000); } // back to home after 3 minutes
+  function closeSecret() { $("secretDetail").classList.remove("open"); clearTimeout(scTimer); clearInterval(scRefresh); }
+  $("secretDetail").addEventListener("click", (e) => { if (e.target.id === "secretDetail") closeSecret(); else bumpSecret(); });
+
+  function wifiHtml() {
+    const w = secretData && secretData.wifi;
+    if (!w) {
+      return `<div class="sc-lock"><div>Locked on this screen.<br>Enter the family passcode.</div><input id="scPass" type="password" autocomplete="off" placeholder="Passcode"><button class="rbtn" id="scGo">Unlock</button></div>`;
+    }
+    const qr = w.qr ? `<div class="sc-qr"><svg viewBox="-1 -1 ${w.qr.n + 2} ${w.qr.n + 2}" shape-rendering="crispEdges"><path d="${w.qr.p}" fill="#000"/></svg></div>` : "";
+    return `${qr}<div class="sc-row">Network<b>${esc(w.ssid)}</b></div><div class="sc-row">Password<b>${esc(w.pass)}</b></div><div class="sc-tip">Point a phone camera at the code to join</div>`;
+  }
+  function renderSecret() {
+    const teams = (SC && SC.teams) || [];
+    $("scCard").innerHTML = `<div class="dd-head"><div class="dd-title">Just for us</div><button class="rbtn close" id="scClose">&times; Close</button></div>
+      <div class="sc-grid"><div><div class="sc-h">Guest Wi-Fi</div><div class="sc-wifi">${wifiHtml()}</div></div>
+      <div><div class="sc-h">Our teams</div><div id="scTeams">${teams.map((t, i) => `<div class="sc-team"><div class="sc-bar" style="background:${t.color || "#4b5563"}"></div><div class="sc-body" id="scT${i}">${teamHtml(t, i)}</div></div>`).join("")}</div><div class="sc-upd" id="scUpd"></div></div></div>`;
+    $("scClose").onclick = closeSecret;
+    const go = $("scGo");
+    if (go) {
+      const f = () => { const v = $("scPass").value.trim(); if (v) secretTry(v, true); };
+      go.onclick = f;
+      $("scPass").addEventListener("keydown", (e) => { if (e.key === "Enter") f(); });
+    }
+    renderSportsTime();
+  }
+
+  /* Sports: ESPN's public scoreboard data (no key). Last result, next game (date, time, TV), live score during a game. */
+  const sports = {};   // by team index: { at, last, next, live, record, err }
+  let sportsAt = 0;
+  const scoreOf = (c) => { const s = c && c.score; if (s == null) return ""; return typeof s === "object" ? (s.displayValue != null ? s.displayValue : s.value) : s; };
+  function parseGame(ev, teamId) {
+    const comp = (ev.competitions || [])[0] || {};
+    const cs = comp.competitors || [];
+    const us = cs.filter(c => String((c.team && c.team.id) || c.id) === String(teamId))[0] || cs[0] || {};
+    const them = cs.filter(c => c !== us)[0] || {};
+    const st = (comp.status && comp.status.type) || (ev.status && ev.status.type) || {};
+    const tv = (comp.broadcasts || []).map(b => (b.media && b.media.shortName) || (b.names && b.names[0]) || "").filter(Boolean)[0] || "";
+    const tName = them.team ? (them.team.shortDisplayName || them.team.displayName || them.team.abbreviation) : "TBD";
+    const rank = them.curatedRank && them.curatedRank.current && them.curatedRank.current < 26 ? "#" + them.curatedRank.current + " " : "";
+    return {
+      id: ev.id, t: new Date(ev.date || comp.date).getTime(), state: st.state || "pre", done: !!st.completed, detail: st.shortDetail || st.detail || "",
+      opp: (us.homeAway === "away" ? "at " : "vs ") + rank + tName, us: scoreOf(us), them: scoreOf(them),
+      win: us.winner === true ? "W" : them.winner === true ? "L" : "", tv: tv, tbd: comp.timeValid === false || ev.timeValid === false
+    };
+  }
+  async function loadTeam(t, i) {
+    const base = `https://site.api.espn.com/apis/site/v2/sports/${t.espn}/teams/${t.id}/schedule`;
+    const res = await Promise.all([getJSON(base + "?seasontype=2"), getJSON(base + "?seasontype=3").catch(() => null)]);
+    let evs = [], info = null;
+    res.forEach((d) => { if (d) { evs = evs.concat(d.events || []); if (!info && d.team) info = d.team; } });
+    const seen = {}, games = evs.filter(e => !seen[e.id] && (seen[e.id] = 1)).map(e => parseGame(e, t.id)).filter(g => !isNaN(g.t)).sort((a, b) => a.t - b.t);
+    const live = games.filter(g => g.state === "in")[0] || null;
+    const past = games.filter(g => g.done || g.state === "post"), next = games.filter(g => g.state === "pre" && !g.done)[0] || null;
+    const s = { at: Date.now(), live: live, last: past[past.length - 1] || null, next: next, record: info ? [info.recordSummary, info.standingSummary].filter(Boolean).join(" · ") : "" };
+    if (live) {  // the schedule can lag during a game: get the up-to-the-minute score
+      try {
+        const sm = await getJSON(`https://site.api.espn.com/apis/site/v2/sports/${t.espn}/summary?event=${live.id}`);
+        const h = sm.header && sm.header.competitions && sm.header.competitions[0];
+        if (h) s.live = parseGame({ id: live.id, date: h.date, competitions: [h] }, t.id);
+      } catch (e) {}
+    }
+    sports[i] = s;
+  }
+  function loadSports(force) {
+    const teams = (SC && SC.teams) || [];
+    const anyLive = Object.keys(sports).some(k => sports[k] && sports[k].live);
+    if (!force && !anyLive && Date.now() - sportsAt < 10 * 60 * 1000) return;   // otherwise every 10 minutes is plenty
+    sportsAt = Date.now();
+    teams.forEach((t, i) => {
+      if (!t.espn) return;
+      loadTeam(t, i).catch((e) => { console.error(e); sports[i] = sports[i] || {}; sports[i].err = true; })
+        .then(() => { const el = $("scT" + i); if (el) el.innerHTML = teamHtml(t, i); renderSportsTime(); });
+    });
+  }
+  function renderSportsTime() { const u = $("scUpd"); if (u && sportsAt) u.textContent = "Scores from ESPN · updated " + fmtTime(new Date(sportsAt), { hour: "numeric", minute: "2-digit" }); }
+  function gameWhen(g) {
+    const d = new Date(g.t), p = tzParts(d), n = tzParts(new Date());
+    const today = Date.UTC(n.year, n.month - 1, n.day), day = Date.UTC(p.year, p.month - 1, p.day), dd = Math.round((day - today) / 864e5);
+    const date = dd === 0 ? "Today" : dd === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: TZ });
+    return date + (g.tbd ? " · time TBA" : " · " + fmtTime(d, { hour: "numeric", minute: "2-digit" }));
+  }
+  function teamHtml(t, i) {
+    const s = sports[i] || {};
+    let h = `<div class="sc-name">${esc(t.name)}<small>${esc(s.record || t.sub || "")}</small></div>`;
+    if (!t.espn) {   // typed-in schedule
+      const now = tzParts(new Date()), key = now.year + "-" + two(now.month) + "-" + two(now.day);
+      const gs = (t.games || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+      const last = gs.filter(g => g.result).pop(), next = gs.filter(g => !g.result && g.date >= key)[0];
+      const fmt = (g) => new Date(g.date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" });
+      if (last) h += `<div class="sc-line"><span class="lb">Last</span>${esc(last.result)} ${esc(last.opp || "")}</div>`;
+      if (next) h += `<div class="sc-line"><span class="lb">Next</span>${esc(next.opp || "")} · ${fmt(next)}${next.time ? " · " + esc(next.time) : ""}</div>`;
+      if (!last && !next && t.note) h += `<div class="sc-line">${esc(t.note)}</div>`;
+      if (t.link) h += `<a class="rbtn sc-link" href="${esc(t.link)}" target="_top">Schedule ›</a>`;
+      return h;
+    }
+    if (!s.at) return h + `<div class="sc-line">${s.err ? "Scores unavailable right now" : "Loading…"}</div>`;
+    if (s.live) {
+      const g = s.live;
+      h += `<div class="sc-line live"><span class="lb">● Live</span>${esc(t.name.split(" ").pop())} ${esc(g.us)}, ${esc(g.opp.replace(/^(vs|at) /, ""))} ${esc(g.them)} · ${esc(g.detail)}${g.tv ? " · " + esc(g.tv) : ""}</div>`;
+    }
+    if (s.last && !s.live) {
+      const g = s.last;
+      h += `<div class="sc-line"><span class="lb">Last</span><span class="${g.win === "W" ? "sc-w" : g.win === "L" ? "sc-l" : ""}">${g.win}</span> ${esc(g.us)}–${esc(g.them)} ${esc(g.opp)}</div>`;
+    }
+    if (s.next) h += `<div class="sc-line"><span class="lb">Next</span>${esc(s.next.opp)} · ${gameWhen(s.next)}${s.next.tv ? " · " + esc(s.next.tv) : ""}</div>`;
+    else if (!s.live) h += `<div class="sc-line">No more games scheduled this season</div>`;
+    return h;
+  }
+
   // Family dates: decrypt the locked list with the passcode saved on this screen (AES-GCM, key from PBKDF2).
   const CD_PASS = "cd_pass";
   function b64u8(s) { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
-  async function cdDecrypt(pass) {
-    const L = CONFIG.countdowns && CONFIG.countdowns.locked;
+  function cdDecrypt(pass) { return decryptLocked(CONFIG.countdowns && CONFIG.countdowns.locked, pass); }
+  async function decryptLocked(L, pass) {
     if (!L || !window.crypto || !crypto.subtle) throw new Error("no crypto");
     const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
     const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64u8(L.s), iterations: L.n || 100000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
@@ -1781,6 +1963,7 @@
       CONFIG.countdowns.events = evs; cdUnlocked = true; cdHtml = null;
       try { updateCelebrate(); } catch (e) {}
       try { localStorage.setItem(CD_PASS, pass); } catch (e) {}
+      if (!secretData) secretTry(pass, false);
       renderCountdowns();
       if (fromUser) { toast("Family dates unlocked on this screen"); showAllCountdowns(); }
       return true;
@@ -1923,7 +2106,7 @@
         const m = /const VERSION = "([^"]+)"/.exec(html || "");
         if (!m || m[1] === VERSION) { setTimeout(checkForUpdate, UPDATE_EVERY); return; }
         const busy = severeActive || document.body.classList.contains("severe-on") ||
-          document.querySelector("#radar.open, #dayDetail.open, #hrDetail.open, #sevDetail.open, #cdDetail.open") ||
+          document.querySelector("#radar.open, #dayDetail.open, #hrDetail.open, #sevDetail.open, #cdDetail.open, #secretDetail.open") ||
           (document.activeElement && document.activeElement.tagName === "INPUT");
         // Don't keep reloading if the browser is still handing back the old copy: one try per new version every 20 minutes
         const tried = store.get("update_tried") || {};
