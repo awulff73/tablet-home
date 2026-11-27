@@ -12,7 +12,7 @@
   }
 </style>
 <script>
-  const VERSION = "2026-11-26e"; // shown at the bottom right; bump on every change so remote checks can see which version is running
+  const VERSION = "2026-11-27a"; // shown at the bottom right; bump on every change so remote checks can see which version is running
   const CONFIG = {
     place: "Madison, AL",
     // Clock always shows this time zone, even if the tablet's own setting is wrong
@@ -1254,6 +1254,7 @@
       if (f && typeof f.isPlugged === "function") plugged = !!f.isPlugged();
       if (f && typeof f.getBatteryLevel === "function") level = Math.round(+f.getBatteryLevel());
     } catch (e) {}
+    if (!f) { setBar($("powerBar"), ""); return; }   // Fully only: a laptop or phone on battery is not the tablet
     if (plugged === null && battApi) { plugged = battApi.charging; level = Math.round(battApi.level * 100); }
     const show = plugged === false;
     const low = show && level !== null && level <= 20;
@@ -1910,7 +1911,8 @@
   function loadSports(force) {
     const teams = (SC && SC.teams) || [];
     const anyLive = Object.keys(sports).some(k => sports[k] && sports[k].live);
-    if (!force && !anyLive && Date.now() - sportsAt < 10 * 60 * 1000) return;   // otherwise every 10 minutes is plenty
+    const anyErr = Object.keys(sports).some(k => sports[k] && sports[k].err);
+    if (!force && !anyLive && !anyErr && Date.now() - sportsAt < 10 * 60 * 1000) return;   // otherwise every 10 minutes is plenty (a failed load tries again next time)
     sportsAt = Date.now();
     teams.forEach((t, i) => {
       if (!t.espn) return;
